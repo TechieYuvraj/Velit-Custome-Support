@@ -5,7 +5,7 @@ const CONFIG = {
         crm: 'https://webhook.site/placeholder-crm-webhook',
         shipping: 'https://internss.app.n8n.cloud/webhook/ShippingLabel'
     },
-    businessId: 'velit-camping-2029'
+    businessId: 'velit-camping-2030'
 };
 
 // Global state
@@ -175,10 +175,10 @@ function renderEmailConversations(conversations) {
     container.innerHTML = conversations.map(conv => `
         <div class="conversation-item" onclick="selectConversation('${conv.conversation_id}', 'email')">
             <div class="conversation-header">
-                <div class="conversation-name">${extractNameFromEmail(conv.sender_email || 'Unknown')}</div>
+                <div class="conversation-name">${conv.name || extractNameFromEmail(conv.email || conv.sender_email || 'Unknown')}</div>
                 <div class="conversation-status status-${conv.status.toLowerCase()}">${conv.status}</div>
             </div>
-            <div class="conversation-email">${conv.sender_email || 'No email'}</div>
+            <div class="conversation-email">${conv.email || 'No email'}</div>
             <div class="conversation-subject">${conv.subject || 'No subject'}</div>
             <div class="conversation-dates">
                 <span>Opened: ${formatDate(conv.started_at)}</span>
