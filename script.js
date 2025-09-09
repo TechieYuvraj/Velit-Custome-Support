@@ -347,15 +347,16 @@ async function sendChatMessage() {
         });
 
         if (response.ok) {
-            let data;
-            let isJson = true;
-            try {
-                data = await response.json();
-            } catch (e) {
-                isJson = false;
-                data = await response.text();
-            }
+            const rawText = await response.text();
             hideTypingIndicator();
+            let data;
+            let isJson = false;
+            try {
+                data = JSON.parse(rawText);
+                isJson = true;
+            } catch (e) {
+                data = rawText;
+            }
             if (isJson) {
                 if (Array.isArray(data) && data[0] && data[0].output) {
                     addChatMessage(data[0].output, 'bot');
