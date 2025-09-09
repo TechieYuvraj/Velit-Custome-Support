@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velit Support Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="fas fa-triangle-exclamation logo-icon"></i>
+                    <div>
+                        <h1>Velit Support Dashboard</h1>
+                        <p>Customer Support Center</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="settings-btn"><i class="fas fa-cog"></i></button>
+                    <button class="refresh-btn"><i class="fas fa-sync-alt"></i></button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Status Cards -->
+        <section class="status-cards">
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-ticket-alt"></i>
+                </div>
+                <div class="card-content">
+                    <h3>TOTAL TICKETS</h3>
+                    <div class="card-number" id="total-tickets">0</div>
+                    <p class="card-update">Updated: <span id="total-update-time">--:--</span></p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="card-content">
+                    <h3>OPEN TICKETS</h3>
+                    <div class="card-number" id="open-tickets">0</div>
+                    <p class="card-update">Updated: <span id="open-update-time">--:--</span></p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="card-content">
+                    <h3>CLOSED TICKETS</h3>
+                    <div class="card-number" id="closed-tickets">0</div>
+                    <p class="card-update">Updated: <span id="closed-update-time">--:--</span></p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-ellipsis-h"></i>
+                </div>
+                <div class="card-content">
+                    <h3>OTHER</h3>
+                    <div class="card-number" id="other-tickets">0</div>
+                    <p class="card-update">Updated: <span id="other-update-time">--:--</span></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dashboard Pages Section -->
+        <section class="dashboard-pages">
+            <div class="pages-header">
+                <h2>Dashboard Pages</h2>
+                <p>Switch between different conversation types</p>
+            </div>
+            
+            <!-- Tab Navigation -->
+            <div class="tab-navigation">
+                <button class="tab-btn active" data-tab="emails">
+                    <i class="fas fa-envelope"></i>
+                    Emails
+                </button>
+                <button class="tab-btn" data-tab="crm">
+                    <i class="fas fa-users"></i>
+                    CRM Agent Chats
+                </button>
+                <button class="tab-btn" data-tab="shipping">
+                    <i class="fas fa-shipping-fast"></i>
+                    Shipping Label
+                </button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Email Section -->
+                <div id="emails" class="tab-pane active">
+                    <div class="section-header">
+                        <h3>Email Conversations</h3>
+                        <div class="date-filters">
+                            <div class="date-input-group">
+                                <label for="from-date">From Date:</label>
+                                <input type="date" id="from-date" value="2024-01-01">
+                            </div>
+                            <div class="date-input-group">
+                                <label for="to-date">To Date:</label>
+                                <input type="date" id="to-date" value="2025-09-09">
+                            </div>
+                            <button class="filter-btn" onclick="filterEmailConversations()">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                        </div>
+                    </div>
+                    <div class="conversations-container">
+                        <div class="conversations-list" id="email-conversations">
+                            <!-- Email conversations will be loaded here -->
+                        </div>
+                        <div class="conversation-detail" id="email-detail">
+                            <div class="detail-placeholder">
+                                <i class="fas fa-envelope-open"></i>
+                                <p>Select a conversation to view messages</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CRM Section -->
+                <div id="crm" class="tab-pane">
+                    <div class="section-header">
+                        <h3>CRM Agent Conversations</h3>
+                    </div>
+                    <div class="conversations-container">
+                        <div class="conversations-list" id="crm-conversations">
+                            <!-- CRM conversations will be loaded here -->
+                        </div>
+                        <div class="conversation-detail" id="crm-detail">
+                            <div class="detail-placeholder">
+                                <i class="fas fa-users"></i>
+                                <p>Select a conversation to view messages</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shipping Label Section -->
+                <div id="shipping" class="tab-pane">
+                    <div class="section-header">
+                        <h3>Shipping Label Assistant</h3>
+                    </div>
+                    <div class="chatbot-container">
+                        <div class="chat-messages" id="chat-messages">
+                            <div class="bot-message">
+                                <div class="message-avatar">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div class="message-content">
+                                    <p>Hello! I'm your Shipping Label Assistant. How can I help you today?</p>
+                                    <span class="message-time">Just now</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chat-input-container">
+                            <div class="chat-input-group">
+                                <input type="text" id="chat-input" placeholder="Type your message here..." onkeypress="handleChatKeyPress(event)">
+                                <button class="send-btn" onclick="sendChatMessage()">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
