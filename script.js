@@ -337,27 +337,36 @@ async function sendChatMessage() {
             sessionId: chatSessionId
         };
         
-        // For development, using mock response
-        setTimeout(() => {
-            hideTypingIndicator();
-            const mockResponse = generateMockChatResponse(message);
-            addChatMessage(mockResponse, 'bot');
-        }, 1500);
-        
-        // Uncomment below for actual webhook integration
-        
         const response = await fetch(CONFIG.webhooks.shipping, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            mode: 'cors'
         });
-        
+
         if (response.ok) {
-            const data = await response.json();
+            let data;
+            let isJson = true;
+            try {
+                data = await response.json();
+            } catch (e) {
+                isJson = false;
+                data = await response.text();
+            }
             hideTypingIndicator();
-            addChatMessage(data.response || 'I received your message.', 'bot');
+            if (isJson) {
+                if (Array.isArray(data) && data[0] && data[0].output) {
+                    addChatMessage(data[0].output, 'bot');
+                } else if (data.response) {
+                    addChatMessage(data.response, 'bot');
+                } else {
+                    addChatMessage('I received your message.', 'bot');
+                }
+            } else {
+                addChatMessage(data, 'bot');
+            }
         } else {
             throw new Error('Failed to send message');
         }
