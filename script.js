@@ -204,11 +204,19 @@ function selectConversation(conversationId, type) {
     document.querySelectorAll('.conversation-item').forEach(item => {
         item.classList.remove('active');
     });
-    
+
     // Add active class to selected item
     event.currentTarget.classList.add('active');
-    
-    const conversation = currentConversations.find(conv => conv.conversation_id === conversationId);
+
+    // Use the correct data source based on type
+    let conversations;
+    if (type === 'crm') {
+        conversations = window.crmConversations || [];
+    } else {
+        conversations = window.emailConversations || [];
+    }
+
+    const conversation = conversations.find(conv => conv.conversation_id === conversationId);
     if (conversation) {
         selectedConversation = conversation;
         renderConversationDetail(conversation, type);
@@ -218,18 +226,22 @@ function selectConversation(conversationId, type) {
 function renderConversationDetail(conversation, type) {
     const containerId = type === 'email' ? 'email-detail' : 'crm-detail';
     const container = document.getElementById(containerId);
-    
-    const senderName = type === 'email' 
-        ? extractNameFromEmail(conversation.sender_email || 'Unknown')
-        : conversation.customer_name || 'Unknown Customer';
-    
-    const contactInfo = type === 'email'
-        ? conversation.sender_email
-        : conversation.contact_info;
-    
+
+    // Determine name and contact info based on type and available fields
+    let senderName, contactInfo, subjectOrTopic;
+    if (type === 'email') {
+        senderName = conversation.name || extractNameFromEmail(conversation.sender_email || conversation.email || 'Unknown');
+        contactInfo = conversation.sender_email || conversation.email || 'No email';
+        subjectOrTopic = conversation.subject || 'No subject';
+    } else {
+        senderName = conversation.customer_name || conversation.name || extractNameFromEmail(conversation.email || conversation.contact_info || 'Unknown');
+        contactInfo = conversation.email || conversation.contact_info || 'No contact info';
+        subjectOrTopic = conversation.subject || conversation.topic || 'General inquiry';
+    }
+
     container.innerHTML = `
         <div class="detail-header">
-            <div class="detail-title">${conversation.subject || conversation.topic || 'Conversation'}</div>
+            <div class="detail-title">${subjectOrTopic}</div>
             <div class="detail-info">
                 <strong>${senderName}</strong> • ${contactInfo} • Status: ${conversation.status}
             </div>
