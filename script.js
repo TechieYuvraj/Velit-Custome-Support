@@ -1,8 +1,8 @@
 // Dashboard Configuration
 const CONFIG = {
     webhooks: {
-        email: 'https://internsss.app.n8n.cloud/webhook/fetchFromDB',
-        crm: 'https://internsss.app.n8n.cloud/webhook/fetchFromDBpublic',
+        email: 'https://internsss.app.n8n.cloud/webhook/fetchFromDB', // Unified webhook for both
+        crm: 'https://internsss.app.n8n.cloud/webhook/fetchFromDB',   // Same as email
         shipping: 'https://internsss.app.n8n.cloud/webhook/ShippingLabel'
     },
     businessId: 'velit-camping-2030'
@@ -23,8 +23,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeDashboard() {
-    // Load initial data
-    loadEmailData();
+    // Load initial data for both sections
+    loadConversationsData();
     updateTicketCounts();
 }
 
@@ -83,26 +83,17 @@ function switchTab(tabName) {
 }
 
 function refreshCurrentTab() {
-    switch(currentTab) {
-        case 'emails':
-            loadEmailData();
-            break;
-        case 'crm':
-            loadCRMData();
-            break;
-        case 'shipping':
-            // Reset chat if needed
-            break;
-    }
+    // Always reload both sections since data comes from the same webhook
+    loadConversationsData();
 }
 
-// Email Section Functions
-async function loadEmailData() {
+// Email & CRM Section Functions (Unified Fetch)
+async function loadConversationsData() {
     showLoading();
-    
+
     const fromDate = document.getElementById('from-date').value;
     const toDate = document.getElementById('to-date').value;
-    
+
     const payload = {
         business_id: CONFIG.businessId,
         from_date: `${fromDate}T00:00:00Z`,
@@ -110,16 +101,6 @@ async function loadEmailData() {
     };
 
     try {
-        // For development, using mock data
-        const mockData = generateMockEmailData();
-        // Filter for emails only
-        const filteredMockData = mockData.filter(conv => conv.channel_type === "email");
-        currentConversations = filteredMockData;
-        renderEmailConversations(filteredMockData);
-        updateTicketCounts(filteredMockData);
-        
-        // Uncomment below for actual webhook integration
-        
         const response = await fetch(CONFIG.webhooks.email, {
             method: 'POST',
             headers: {
@@ -127,28 +108,35 @@ async function loadEmailData() {
             },
             body: JSON.stringify(payload)
         });
-        
+
         if (response.ok) {
             const data = await response.json();
-            // Filter for emails only
-            const filteredData = (Array.isArray(data) ? data : [data]).filter(conv => conv.channel_type === "email");
-            currentConversations = filteredData;
-            renderEmailConversations(filteredData);
-            updateTicketCounts(filteredData);
+            // Separate conversations by channel_type
+            const allConversations = Array.isArray(data) ? data : [data];
+            const emailConversations = allConversations.filter(conv => conv.channel_type === "email");
+            const crmConversations = allConversations.filter(conv => conv.channel_type === "inapp_public");
+
+            // Store for global access if needed
+            window.emailConversations = emailConversations;
+            window.crmConversations = crmConversations;
+
+            // Render each section
+            renderEmailConversations(emailConversations);
+            renderCRMConversations(crmConversations);
+            updateTicketCounts(emailConversations);
         } else {
-            throw new Error('Failed to fetch email data');
+            throw new Error('Failed to fetch conversations data');
         }
-        
     } catch (error) {
-        console.error('Error loading email data:', error);
-        showError('Failed to load email conversations');
+        console.error('Error loading conversations data:', error);
+        showError('Failed to load conversations');
     } finally {
         hideLoading();
     }
 }
 
 function filterEmailConversations() {
-    loadEmailData();
+    loadConversationsData();
 }
 
 function renderEmailConversations(conversations) {
@@ -181,49 +169,6 @@ function renderEmailConversations(conversations) {
 }
 
 // CRM Section Functions
-async function loadCRMData() {
-    showLoading();
-    
-    const payload = {
-        business_id: CONFIG.businessId
-    };
-
-    try {
-        // For development, using mock data
-        const mockData = generateMockCRMData();
-        // Filter for CRM (inapp_public) only
-        const filteredMockData = mockData.filter(conv => conv.channel_type === "inapp_public");
-        currentConversations = filteredMockData;
-        renderCRMConversations(filteredMockData);
-        
-        // Uncomment below for actual webhook integration
-        
-        const response = await fetch(CONFIG.webhooks.crm, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload)
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            // Filter for CRM (inapp_public) only
-            const filteredData = (Array.isArray(data) ? data : [data]).filter(conv => conv.channel_type === "inapp_public");
-            currentConversations = filteredData;
-            renderCRMConversations(filteredData);
-        } else {
-            throw new Error('Failed to fetch CRM data');
-        }
-        
-    } catch (error) {
-        console.error('Error loading CRM data:', error);
-        showError('Failed to load CRM conversations');
-    } finally {
-        hideLoading();
-    }
-}
-
 function renderCRMConversations(conversations) {
     const container = document.getElementById('crm-conversations');
     
