@@ -188,8 +188,8 @@ function renderCRMConversations(conversations) {
                 <div class="conversation-name">${conv.customer_name || 'Unknown Customer'}</div>
                 <div class="conversation-status status-${conv.status.toLowerCase()}">${conv.status}</div>
             </div>
-            <div class="conversation-email">${conv.contact_info || 'No contact info'}</div>
-            <div class="conversation-subject">${conv.topic || 'General inquiry'}</div>
+            <div class="conversation-email">${conv.email || 'No contact info'}</div>
+            <div class="conversation-subject">${conv.subject || 'General inquiry'}</div>
             <div class="conversation-dates">
                 <span>Started: ${formatDate(conv.started_at)}</span>
                 <span>Updated: ${formatDate(conv.updated_at || conv.started_at)}</span>
