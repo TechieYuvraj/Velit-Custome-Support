@@ -5,7 +5,7 @@ const CONFIG = {
         crm: 'https://internsss.app.n8n.cloud/webhook/fetchFromDB',   // Same as email
         shipping: 'https://internsss.app.n8n.cloud/webhook/ShippingLabel'
     },
-    businessId: 'velit-camping-2030'
+    businessId: 'velit-camping-2032'
 };
 
 // Global state
@@ -249,7 +249,23 @@ function renderConversationDetail(conversation, type) {
         <div class="messages-container">
             ${renderMessages(conversation.messages || [])}
         </div>
+        ${type === 'email' ? `
+        <div class="email-reply-box" style="margin-top:16px;display:flex;gap:8px;">
+            <input id="email-reply-input" type="text" placeholder="Type your reply..." style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc;">
+            <button id="email-reply-send" style="padding:8px 18px;border-radius:6px;background:#3a7bd5;color:#fff;border:none;cursor:pointer;">Send</button>
+        </div>
+        ` : ''}
     `;
+
+    // Add event listener for sending email reply
+    if (type === 'email') {
+        document.getElementById('email-reply-send').onclick = function() {
+            sendEmailReply(conversation);
+        };
+        document.getElementById('email-reply-input').onkeypress = function(e) {
+            if (e.key === 'Enter') sendEmailReply(conversation);
+        };
+    }
 }
 
 function renderMessages(messages) {
@@ -257,13 +273,25 @@ function renderMessages(messages) {
         return '<p style="text-align: center; color: #888; padding: 20px;">No messages in this conversation</p>';
     }
 
-    return messages.map(message => {
+    return messages.map(msg => {
+        // Support both flat and Firestore-style nested message objects
+        const message = msg.fields ? {
+            sender: msg.fields.sender?.stringValue,
+            message: msg.fields.message?.stringValue,
+            imagelink: msg.fields.imagelink?.stringValue,
+            timestamp: msg.fields.timestamp?.timestampValue || msg.fields.timestamp?.stringValue,
+        } : msg;
+
         const isUser = message.sender === 'user' || message.sender === 'customer';
         const messageClass = isUser ? 'message-user' : 'message-agent';
-        
+        const textContent = message.message || message.content || 'No content';
+        const imageContent = message.imagelink
+            ? `<div class="message-image"><img src="${message.imagelink}" alt="attachment" style="max-width:220px;max-height:160px;border-radius:8px;margin-top:8px;"></div>`
+            : '';
         return `
             <div class="message-bubble ${messageClass}">
-                ${message.message || message.content || 'No content'}
+                ${textContent}
+                ${imageContent}
                 <span class="message-time">${formatDate(message.timestamp)}</span>
             </div>
         `;
