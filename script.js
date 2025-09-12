@@ -600,3 +600,50 @@ function generateMockChatResponse(userMessage) {
     
     return responses[Math.floor(Math.random() * responses.length)];
 }
+
+async function sendEmailReply(conversation) {
+    const input = document.getElementById('email-reply-input');
+    const content = input.value.trim();
+    if (!content) return;
+
+    // Find the latest message for message_id and thread_id
+    const lastMsg = (conversation.messages && conversation.messages.length > 0)
+        ? conversation.messages[conversation.messages.length - 1]
+        : {};
+
+    // Prepare payload
+    const payload = {
+        "to-email": conversation.email || conversation.sender_email || "",
+        "message_id": lastMsg.message_id || "",
+        "thread_id": conversation.conversation_id || "",
+        "from-email": conversation.agent_email || "support@velit.com", // Placeholder, update as needed
+        "subject": conversation.subject || "",
+        "content": content
+    };
+
+    // Placeholder webhook URL
+    const webhookUrl = "https://internsss.app.n8n.cloud/webhook/sendEmail";
+
+    showLoading(); // Show loader
+
+    try {
+        const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            input.value = '';
+            alert('Email sent successfully (placeholder)');
+        } else {
+            throw new Error('Failed to send email');
+        }
+    } catch (error) {
+        alert('Error sending email: ' + error.message);
+    } finally {
+        hideLoading(); // Hide loader
+    }
+}
