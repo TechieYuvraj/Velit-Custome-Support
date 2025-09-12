@@ -362,22 +362,38 @@ async function sendChatMessage() {
 
 function addChatMessage(message, sender) {
     const chatMessages = document.getElementById('chat-messages');
-    const messageClass = sender === 'user' ? 'user-message' : 'bot-message';
-    const avatarIcon = sender === 'user' ? 'fa-user' : 'fa-robot';
-    
-    const messageElement = document.createElement('div');
-    messageElement.className = messageClass;
-    messageElement.innerHTML = `
-        <div class="message-avatar">
-            <i class="fas ${avatarIcon}"></i>
-        </div>
-        <div class="message-content">
-            <p>${message}</p>
-            <span class="message-time">${formatTime(new Date())}</span>
-        </div>
-    `;
-    
-    chatMessages.appendChild(messageElement);
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    let messageHtml;
+    if (sender === 'bot') {
+        // Render Markdown for bot messages
+        messageHtml = `
+            <div class="bot-message">
+                <div class="message-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="message-content">
+                    <div>${marked.parse(message)}</div>
+                    <span class="message-time">${time}</span>
+                </div>
+            </div>
+        `;
+    } else {
+        // User message (plain text)
+        messageHtml = `
+            <div class="user-message">
+                <div class="message-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="message-content">
+                    <p>${message}</p>
+                    <span class="message-time">${time}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    chatMessages.insertAdjacentHTML('beforeend', messageHtml);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
