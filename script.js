@@ -225,42 +225,48 @@ function renderConversationDetail(conversation, type) {
     const containerId = type === 'email' ? 'email-detail' : 'crm-detail';
     const container = document.getElementById(containerId);
 
-    // Determine name and contact info based on type and available fields
-    let senderName, contactInfo, subjectOrTopic;
     if (type === 'email') {
-        senderName = conversation.name || extractNameFromEmail(conversation.sender_email || conversation.email || 'Unknown');
-        contactInfo = conversation.sender_email || conversation.email || 'No email';
-        subjectOrTopic = conversation.subject || 'No subject';
-    } else {
-        subjectOrTopic = conversation.session_id || conversation.session_id || 'General inquiry';
-    }
+        // EMAIL SECTION UI
+        const senderName = conversation.name || extractNameFromEmail(conversation.sender_email || conversation.email || 'Unknown');
+        const contactInfo = conversation.sender_email || conversation.email || 'No email';
+        const subjectOrTopic = conversation.subject || 'No subject';
 
-    container.innerHTML = `
-        <div class="detail-header">
-            <div class="detail-title">${subjectOrTopic}</div>
-            <div class="detail-info">
-                <strong>${senderName}</strong> • ${contactInfo} • Status: ${conversation.status}
+        container.innerHTML = `
+            <div class="detail-header">
+                <div class="detail-title">${subjectOrTopic}</div>
+                <div class="detail-info">
+                    <strong>${senderName}</strong> • ${contactInfo} • Status: ${conversation.status}
+                </div>
             </div>
-        </div>
-        <div class="messages-container">
-            ${renderMessages(conversation.messages || [])}
-        </div>
-        ${type === 'email' ? `
-        <div class="email-reply-box" style="margin-top:16px;display:flex;gap:8px;">
-            <input id="email-reply-input" type="text" placeholder="Type your reply..." style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc;">
-            <button id="email-reply-send" style="padding:8px 18px;border-radius:6px;background:#3a7bd5;color:#fff;border:none;cursor:pointer;">Send</button>
-        </div>
-        ` : ''}
-    `;
+            <div class="messages-container">
+                ${renderMessages(conversation.messages || [])}
+            </div>
+            <div class="email-reply-box" style="margin-top:16px;display:flex;gap:8px;">
+                <input id="email-reply-input" type="text" placeholder="Type your reply..." style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc;">
+                <button id="email-reply-send" style="padding:8px 18px;border-radius:6px;background:#3a7bd5;color:#fff;border:none;cursor:pointer;">Send</button>
+            </div>
+        `;
 
-    // Add event listener for sending email reply
-    if (type === 'email') {
+        // Add event listeners for sending email reply
         document.getElementById('email-reply-send').onclick = function() {
             sendEmailReply(conversation);
         };
         document.getElementById('email-reply-input').onkeypress = function(e) {
             if (e.key === 'Enter') sendEmailReply(conversation);
         };
+
+    } else if (type === 'crm') {
+        // CRM SECTION UI
+        const subjectOrTopic = conversation.session_id || 'General inquiry';
+
+        container.innerHTML = `
+            <div class="detail-header">
+                <div class="detail-title">${subjectOrTopic}</div>
+            </div>
+            <div class="messages-container">
+                ${renderMessages(conversation.messages || [])}
+            </div>
+        `;
     }
 }
 
