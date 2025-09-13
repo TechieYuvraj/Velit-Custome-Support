@@ -5,7 +5,7 @@ const CONFIG = {
         crm: 'https://internsss.app.n8n.cloud/webhook/fetchFromDB',   // Same as email
         shipping: 'https://internsss.app.n8n.cloud/webhook/ShippingLabel'
     },
-    businessId: 'velit-camping-2032'
+    businessId: 'velit-camping-2027'
 };
 
 // Global state
@@ -185,11 +185,9 @@ function renderCRMConversations(conversations) {
     container.innerHTML = conversations.map(conv => `
         <div class="conversation-item" onclick="selectConversation('${conv.conversation_id}', 'crm')">
             <div class="conversation-header">
-                <div class="conversation-name">${conv.customer_name || 'Unknown Customer'}</div>
+                <div class="conversation-name">${conv.session_id || 'Unknown Customer'}</div>
                 <div class="conversation-status status-${conv.status.toLowerCase()}">${conv.status}</div>
             </div>
-            <div class="conversation-email">${conv.email || 'No contact info'}</div>
-            <div class="conversation-subject">${conv.subject || 'General inquiry'}</div>
             <div class="conversation-dates">
                 <span>Started: ${formatDate(conv.started_at)}</span>
                 <span>Updated: ${formatDate(conv.updated_at || conv.started_at)}</span>
@@ -234,9 +232,7 @@ function renderConversationDetail(conversation, type) {
         contactInfo = conversation.sender_email || conversation.email || 'No email';
         subjectOrTopic = conversation.subject || 'No subject';
     } else {
-        senderName = conversation.customer_name || conversation.name || extractNameFromEmail(conversation.email || conversation.contact_info || 'Unknown');
-        contactInfo = conversation.email || conversation.contact_info || 'No contact info';
-        subjectOrTopic = conversation.subject || conversation.topic || 'General inquiry';
+        subjectOrTopic = conversation.session_id || conversation.session_id || 'General inquiry';
     }
 
     container.innerHTML = `
@@ -282,17 +278,21 @@ function renderMessages(messages) {
             timestamp: msg.fields.timestamp?.timestampValue || msg.fields.timestamp?.stringValue,
         } : msg;
 
+        // User messages on left, admin/support on right
         const isUser = message.sender === 'user' || message.sender === 'customer';
-        const messageClass = isUser ? 'message-user' : 'message-agent';
+        const alignClass = isUser ? 'message-left' : 'message-right';
+        const bubbleClass = isUser ? 'message-bubble-user' : 'message-bubble-admin';
         const textContent = message.message || message.content || 'No content';
         const imageContent = message.imagelink
             ? `<div class="message-image"><img src="${message.imagelink}" alt="attachment" style="max-width:220px;max-height:160px;border-radius:8px;margin-top:8px;"></div>`
             : '';
         return `
-            <div class="message-bubble ${messageClass}">
-                ${textContent}
-                ${imageContent}
-                <span class="message-time">${formatDate(message.timestamp)}</span>
+            <div class="message-row ${alignClass}">
+                <div class="${bubbleClass}">
+                    ${textContent}
+                    ${imageContent}
+                    <span class="message-time">${formatDate(message.timestamp)}</span>
+                </div>
             </div>
         `;
     }).join('');
