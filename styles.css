@@ -409,12 +409,45 @@ body {
     gap: 15px;
 }
 
+.message-row {
+    display: flex;
+    margin-bottom: 10px;
+}
+
+.message-left {
+    justify-content: flex-start;
+}
+
+.message-right {
+    justify-content: flex-end;
+}
+
 .message-bubble {
     max-width: 80%;
     padding: 12px 16px;
     border-radius: 18px;
     font-size: 0.9rem;
     line-height: 1.4;
+}
+
+.message-bubble-user {
+    background: #c4daef;
+    color: #222;
+    border-radius: 16px 16px 16px 4px;
+    padding: 12px 16px;
+    max-width: 70%;
+    box-shadow: 0 2px 8px rgba(58,123,213,0.04);
+    text-align: left;
+}
+
+.message-bubble-admin {
+    background: #3a7bd5;
+    color: #fff;
+    border-radius: 16px 16px 4px 16px;
+    padding: 12px 16px;
+    max-width: 70%;
+    box-shadow: 0 2px 8px rgba(58,123,213,0.08);
+    text-align: left;
 }
 
 .message-user {
@@ -433,10 +466,10 @@ body {
 }
 
 .message-time {
-    font-size: 0.7rem;
-    opacity: 0.7;
-    margin-top: 5px;
     display: block;
+    font-size: 0.8em;
+    color: #fff;
+    margin-top: 6px;
 }
 
 /* Chatbot Styles */
