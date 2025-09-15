@@ -6,7 +6,7 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #e3eafc 0%, #c1d3fe 100%);
+    background: linear-gradient(135deg, #dbede8 0%, #b8dacf 100%);
     min-height: 100vh;
     color: #222;
 }
@@ -19,7 +19,7 @@ body {
 
 /* Header Styles */
 .dashboard-header {
-    background: linear-gradient(135deg, #3a7bd5 0%, #3a6073 100%);
+    background: linear-gradient(135deg, #90cfbd 0%, #385a4f 100%);
     border-radius: 15px;
     padding: 20px 30px;
     margin-bottom: 30px;
@@ -102,7 +102,7 @@ body {
 }
 
 .card-icon {
-    background: linear-gradient(135deg, #dbeafe 0%, #a7bfe8 100%);
+    background: linear-gradient(135deg, #90cfbd 0%, #385a4f 100%);
     width: 60px;
     height: 60px;
     border-radius: 12px;
@@ -114,11 +114,11 @@ body {
 
 .card-icon i {
     font-size: 1.5rem;
-    color: #3a7bd5;
+    color: #0e3a2d;
 }
 
 .card-content h3 {
-    color: #3a7bd5;
+    color: #0e3a2d;
     font-size: 0.9rem;
     font-weight: 600;
     margin-bottom: 10px;
@@ -146,7 +146,7 @@ body {
 }
 
 .pages-header h2 {
-    color: #3a7bd5;
+    color: #0e3a2d;
     font-size: 1.5rem;
     margin-bottom: 5px;
 }
@@ -184,14 +184,14 @@ body {
 }
 
 .tab-btn.active {
-    background: #3a7bd5;
+    background: #195744;
     color: white;
-    box-shadow: 0 4px 15px rgba(58, 123, 213, 0.18);
+    box-shadow: 0 4px 15px #96b6ac;
 }
 
 .tab-btn:hover:not(.active) {
-    background: rgba(58, 123, 213, 0.08);
-    color: #3a7bd5;
+    background: rgba(58, 213, 138, 0.08);
+    color: #0e3a2d;
 }
 
 /* Tab Content */
@@ -247,11 +247,11 @@ body {
 
 .date-input-group input:focus {
     outline: none;
-    border-color: #3a7bd5;
+    border-color: #0e3a2d;
 }
 
 .filter-btn {
-    background: #3a7bd5;
+    background: #0e3a2d;
     color: white;
     border: none;
     padding: 10px 20px;
@@ -266,7 +266,7 @@ body {
 }
 
 .filter-btn:hover {
-    background: #274b6d;
+    background: #195744;
     transform: translateY(-2px);
 }
 
@@ -301,8 +301,8 @@ body {
 }
 
 .conversation-item.active {
-    border-color: #3a7bd5;
-    box-shadow: 0 5px 20px rgba(58, 123, 213, 0.13);
+    border-color: #275f4e;
+    box-shadow: 0 5px 20px rgba(58, 213, 148, 0.13);
 }
 
 .conversation-header {
@@ -327,13 +327,13 @@ body {
 }
 
 .status-open {
-    background: #e0f2fe;
-    color: #2563eb;
+    background: #e0fef5;
+    color: #0e3a2d;
 }
 
 .status-closed {
-    background: #e0e7ff;
-    color: #3730a3;
+    background: #b8c5c2;
+    color: #0e3a2d;
 }
 
 .status-pending {
@@ -363,7 +363,7 @@ body {
 
 /* Conversation Detail */
 .conversation-detail {
-    background: #f8f9fa;
+    background: #e2ecea;
     border-radius: 12px;
     padding: 20px;
     overflow-y: auto;
@@ -431,28 +431,28 @@ body {
 }
 
 .message-bubble-user {
-    background: #c4daef;
+    background: #9fbeb4;
     color: #222;
     border-radius: 16px 16px 16px 4px;
     padding: 12px 16px;
     max-width: 70%;
-    box-shadow: 0 2px 8px rgba(58,123,213,0.04);
+    box-shadow: 0 2px 8px rgba(58, 213, 161, 0.04);
     text-align: left;
 }
 
 .message-bubble-admin {
-    background: #3a7bd5;
+    background: #196750;
     color: #fff;
     border-radius: 16px 16px 4px 16px;
     padding: 12px 16px;
     max-width: 70%;
-    box-shadow: 0 2px 8px rgba(58,123,213,0.08);
+    box-shadow: 0 2px 8px rgba(58, 213, 148, 0.08);
     text-align: left;
 }
 
 .message-user {
     align-self: flex-end;
-    background: #4b8ae2;
+    background: #175e49;
     color: white;
     border-bottom-right-radius: 6px;
 }
@@ -510,12 +510,12 @@ body {
 }
 
 .bot-message .message-avatar {
-    background: #3a7bd5;
+    background: #2c9777;
     color: white;
 }
 
 .user-message .message-avatar {
-    background: #6366f1;
+    background: #267860;
     color: white;
 }
 
@@ -528,7 +528,7 @@ body {
 }
 
 .user-message .message-content {
-    background: #6366f1;
+    background: #247b61;
     color: white;
 }
 
@@ -566,11 +566,11 @@ body {
 
 .chat-input-group input:focus {
     outline: none;
-    border-color: #3a7bd5;
+    border-color: #175e49;
 }
 
 .send-btn {
-    background: #3a7bd5;
+    background: #175e49;
     color: white;
     border: none;
     width: 45px;
@@ -585,7 +585,7 @@ body {
 }
 
 .send-btn:hover {
-    background: #274b6d;
+    background: #175e49;
     transform: scale(1.05);
 }
 
@@ -613,7 +613,7 @@ body {
 
 .loading-spinner i {
     font-size: 2rem;
-    color: #3a7bd5;
+    color: #175e49;
     margin-bottom: 15px;
 }
 

@@ -243,7 +243,7 @@ function renderConversationDetail(conversation, type) {
             </div>
             <div class="email-reply-box" style="margin-top:16px;display:flex;gap:8px;">
                 <input id="email-reply-input" type="text" placeholder="Type your reply..." style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc;">
-                <button id="email-reply-send" style="padding:8px 18px;border-radius:6px;background:#3a7bd5;color:#fff;border:none;cursor:pointer;">Send</button>
+                <button id="email-reply-send" style="padding:8px 18px;border-radius:6px;background:#175e49;color:#fff;border:none;cursor:pointer;">Send</button>
             </div>
         `;
 
