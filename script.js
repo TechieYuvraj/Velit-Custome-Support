@@ -230,12 +230,21 @@ function renderConversationDetail(conversation, type) {
         const senderName = conversation.name || extractNameFromEmail(conversation.sender_email || conversation.email || 'Unknown');
         const contactInfo = conversation.sender_email || conversation.email || 'No email';
         const subjectOrTopic = conversation.subject || 'No subject';
+        const isOpen = (conversation.status || '').toLowerCase() === 'open';
 
         container.innerHTML = `
             <div class="detail-header">
                 <div class="detail-title">${subjectOrTopic}</div>
                 <div class="detail-info">
-                    <strong>${senderName}</strong> • ${contactInfo} • Status: ${conversation.status}
+                    <strong>${senderName}</strong> • ${contactInfo}
+                    <span style="margin-left:16px;">
+                        <label class="status-toggle-label">
+                            <span style="margin-right:8px;">Open</span>
+                            <input type="checkbox" id="status-toggle" ${isOpen ? 'checked' : ''} />
+                            <span class="status-toggle-slider"></span>
+                            <span style="margin-left:8px;">Closed</span>
+                        </label>
+                    </span>
                 </div>
             </div>
             <div class="messages-container">
@@ -243,7 +252,7 @@ function renderConversationDetail(conversation, type) {
             </div>
             <div class="email-reply-box" style="margin-top:16px;display:flex;gap:8px;">
                 <input id="email-reply-input" type="text" placeholder="Type your reply..." style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc;">
-                <button id="email-reply-send" style="padding:8px 18px;border-radius:6px;background:#175e49;color:#fff;border:none;cursor:pointer;">Send</button>
+                <button id="email-reply-send" style="padding:8px 18px;border-radius:6px;background:#3a7bd5;color:#fff;border:none;cursor:pointer;">Send</button>
             </div>
         `;
 
@@ -255,6 +264,11 @@ function renderConversationDetail(conversation, type) {
             if (e.key === 'Enter') sendEmailReply(conversation);
         };
 
+        // Add event listener for status toggle
+        document.getElementById('status-toggle').onchange = function() {
+            const newStatus = this.checked ? 'Open' : 'Closed';
+            sendStatusUpdate(conversation.session_id, CONFIG.businessId, newStatus, conversation.from_email || conversation.email || '');
+        };
     } else if (type === 'crm') {
         // CRM SECTION UI
         const subjectOrTopic = conversation.session_id || 'General inquiry';
@@ -267,6 +281,31 @@ function renderConversationDetail(conversation, type) {
                 ${renderMessages(conversation.messages || [])}
             </div>
         `;
+    }
+}
+
+// Add this function to send status update to the webhook
+async function sendStatusUpdate(session_id, status) {
+    showLoading();
+    const payload = {
+        session_id: session_id,
+        status: status,
+        business_id: CONFIG.businessId,
+        from_email: selectedConversation.from_email || selectedConversation.email || ''
+    };
+    try {
+        await fetch("https://internsss.app.n8n.cloud/webhook/StatusSaving", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        });
+        // Optionally show a toast or update UI
+    } catch (error) {
+        showError('Failed to update status');
+    } finally {
+        hideLoading();
     }
 }
 
@@ -289,9 +328,20 @@ function renderMessages(messages) {
         const alignClass = isUser ? 'message-left' : 'message-right';
         const bubbleClass = isUser ? 'message-bubble-user' : 'message-bubble-admin';
         const textContent = message.message || message.content || 'No content';
-        const imageContent = message.imagelink
-            ? `<div class="message-image"><img src="${message.imagelink}" alt="attachment" style="max-width:220px;max-height:160px;border-radius:8px;margin-top:8px;"></div>`
+
+        // Convert Google Drive link if needed
+        let imageUrl = message.imagelink || '';
+        if (imageUrl.includes('drive.google.com/file/d/')) {
+            const match = imageUrl.match(/\/d\/([a-zA-Z0-9_-]+)\//);
+            if (match && match[1]) {
+                imageUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+            }
+        }
+
+        const imageContent = imageUrl
+            ? `<div class="message-image"><img src="${imageUrl}" alt="attachment" style="max-width:220px;max-height:160px;border-radius:8px;margin-top:8px;" onerror="this.onerror=null;this.src='https://via.placeholder.com/220x160?text=Image+not+found';"></div>`
             : '';
+
         return `
             <div class="message-row ${alignClass}">
                 <div class="${bubbleClass}">
