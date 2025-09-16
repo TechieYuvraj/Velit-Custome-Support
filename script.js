@@ -3,7 +3,7 @@ const CONFIG = {
     webhooks: {
         email: 'https://internsss.app.n8n.cloud/webhook/fetchFromDB', // Unified webhook for both
         crm: 'https://internsss.app.n8n.cloud/webhook/fetchFromDB',   // Same as email
-        shipping: 'https://internsss.app.n8n.cloud/webhook/ShippingLabel'
+        shipping: 'https://internsss.app.n8n.cloud/webhook-test/ShippingLabel'
     },
     businessId: 'velit-camping-2027'
 };
@@ -319,6 +319,7 @@ function renderMessages(messages) {
         const message = msg.fields ? {
             sender: msg.fields.sender?.stringValue,
             message: msg.fields.message?.stringValue,
+            image_link: msg.fields.image_link?.stringValue,
             imagelink: msg.fields.imagelink?.stringValue,
             timestamp: msg.fields.timestamp?.timestampValue || msg.fields.timestamp?.stringValue,
         } : msg;
@@ -329,8 +330,8 @@ function renderMessages(messages) {
         const bubbleClass = isUser ? 'message-bubble-user' : 'message-bubble-admin';
         const textContent = message.message || message.content || 'No content';
 
-        // Convert Google Drive link if needed
-        let imageUrl = message.imagelink || '';
+        // Handle Google Drive link conversion for image preview
+        let imageUrl = message.image_link || message.imagelink || '';
         if (imageUrl.includes('drive.google.com/file/d/')) {
             const match = imageUrl.match(/\/d\/([a-zA-Z0-9_-]+)\//);
             if (match && match[1]) {
@@ -338,14 +339,15 @@ function renderMessages(messages) {
             }
         }
 
+        // Render both text and image in the same bubble
         const imageContent = imageUrl
-            ? `<div class="message-image"><img src="${imageUrl}" alt="attachment" style="max-width:220px;max-height:160px;border-radius:8px;margin-top:8px;" onerror="this.onerror=null;this.src='https://via.placeholder.com/220x160?text=Image+not+found';"></div>`
+            ? `<div class="message-image"><img src="${imageUrl}" alt="attachment" style="max-width:220px;max-height:160px;border-radius:8px;margin-top:8px;" onerror="this.onerror=null;this.src='https://via.placeholder.com/220x160.png?text=Image+not+found';"></div>`
             : '';
 
         return `
             <div class="message-row ${alignClass}">
                 <div class="${bubbleClass}">
-                    ${textContent}
+                    <div>${textContent}</div>
                     ${imageContent}
                     <span class="message-time">${formatDate(message.timestamp)}</span>
                 </div>
