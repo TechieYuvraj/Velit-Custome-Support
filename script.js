@@ -423,7 +423,13 @@ async function fetchLabelHistory() {
     if (!historyDiv) return;
     historyDiv.innerHTML = 'Loading history...';
     try {
-        const response = await fetch('https://internsss.app.n8n.cloud/webhook/LabelHistory');
+        const response = await fetch('https://internsss.app.n8n.cloud/webhook/LabelHistory', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+        });
         if (response.ok) {
             const data = await response.json();
             historyDiv.innerHTML = renderLabelHistory(data);
