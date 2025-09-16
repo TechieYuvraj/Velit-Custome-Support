@@ -357,126 +357,91 @@ function renderMessages(messages) {
 }
 
 // Shipping Label Chatbot Functions
-async function sendChatMessage() {
-    const input = document.getElementById('chat-input');
-    const message = input.value.trim();
-    
-    if (!message) return;
-    
-    // Add user message to chat
-    addChatMessage(message, 'user');
-    input.value = '';
-    
-    // Show typing indicator
-    showTypingIndicator();
-    
+// Shipping Label Assistant Functions
+document.addEventListener('DOMContentLoaded', function() {
+    const shippingForm = document.getElementById('shipping-label-form');
+    if (shippingForm) {
+        shippingForm.addEventListener('submit', handleShippingLabelSubmit);
+        fetchLabelHistory();
+    }
+});
+
+async function handleShippingLabelSubmit(event) {
+    event.preventDefault();
+    const orderNo = document.getElementById('order-no').value.trim();
+    const productDimensions = document.getElementById('product-dimensions').value.trim();
+    const fromAddress = document.getElementById('from-address').value.trim();
+
+    if (!orderNo || !productDimensions || !fromAddress) {
+        showShippingLabelResponse('Please fill in all fields.', true);
+        return;
+    }
+
+    showShippingLabelResponse('Generating label...', false);
+
     try {
         const payload = {
-            chatInput: message,
-            sessionId: chatSessionId
+            order_no: orderNo,
+            product_dimensions: productDimensions,
+            from_address: fromAddress
         };
-        
-        const response = await fetch(CONFIG.webhooks.shipping, {
+        const response = await fetch('https://internsss.app.n8n.cloud/webhook/ShippingLabel', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(payload),
-            mode: 'cors'
+            body: JSON.stringify(payload)
         });
-
         if (response.ok) {
-            const rawText = await response.text();
-            hideTypingIndicator();
-            let data;
-            let isJson = false;
-            try {
-                data = JSON.parse(rawText);
-                isJson = true;
-            } catch (e) {
-                data = rawText;
-            }
-            if (isJson) {
-                if (Array.isArray(data) && data[0] && data[0].output) {
-                    addChatMessage(data[0].output, 'bot');
-                } else if (data.response) {
-                    addChatMessage(data.response, 'bot');
-                } else {
-                    addChatMessage('I received your message.', 'bot');
-                }
-            } else {
-                addChatMessage(data, 'bot');
-            }
+            const data = await response.json();
+            showShippingLabelResponse(formatLabelResponse(data), false);
+            fetchLabelHistory(); // Refresh history after new label
         } else {
-            throw new Error('Failed to send message');
+            showShippingLabelResponse('Failed to generate label. Please try again.', true);
         }
-        
     } catch (error) {
-        console.error('Error sending chat message:', error);
-        hideTypingIndicator();
-        addChatMessage('Sorry, I encountered an error. Please try again.', 'bot');
+        showShippingLabelResponse('Error: ' + error.message, true);
     }
 }
 
-function addChatMessage(message, sender) {
-    const chatMessages = document.getElementById('chat-messages');
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    let messageHtml;
-    if (sender === 'bot') {
-        // Render Markdown for bot messages
-        messageHtml = `
-            <div class="bot-message">
-                <div class="message-avatar">
-                    <i class="fas fa-robot"></i>
-                </div>
-                <div class="message-content">
-                    <div>${marked.parse(message)}</div>
-                    <span class="message-time">${time}</span>
-                </div>
-            </div>
-        `;
-    } else {
-        // User message (plain text)
-        messageHtml = `
-            <div class="user-message">
-                <div class="message-avatar">
-                    <i class="fas fa-user"></i>
-                </div>
-                <div class="message-content">
-                    <p>${message}</p>
-                    <span class="message-time">${time}</span>
-                </div>
-            </div>
-        `;
+function showShippingLabelResponse(message, isError) {
+    const responseDiv = document.getElementById('shipping-label-response');
+    if (responseDiv) {
+        responseDiv.innerHTML = `<div class="${isError ? 'error' : 'success'}">${message}</div>`;
     }
-
-    chatMessages.insertAdjacentHTML('beforeend', messageHtml);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-function showTypingIndicator() {
-    const chatMessages = document.getElementById('chat-messages');
-    const typingElement = document.createElement('div');
-    typingElement.className = 'bot-message typing-indicator';
-    typingElement.innerHTML = `
-        <div class="message-avatar">
-            <i class="fas fa-robot"></i>
-        </div>
-        <div class="message-content">
-            <p><i class="fas fa-ellipsis-h fa-pulse"></i> Typing...</p>
-        </div>
-    `;
-    
-    chatMessages.appendChild(typingElement);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+function formatLabelResponse(data) {
+    if (!data) return 'No label data.';
+    if (typeof data === 'string') return data;
+    // Customize formatting as needed
+    return `<pre>${JSON.stringify(data, null, 2)}</pre>`;
 }
 
-function hideTypingIndicator() {
-    const typingIndicator = document.querySelector('.typing-indicator');
-    if (typingIndicator) {
-        typingIndicator.remove();
+async function fetchLabelHistory() {
+    const historyDiv = document.getElementById('label-history-list');
+    if (!historyDiv) return;
+    historyDiv.innerHTML = 'Loading history...';
+    try {
+        const response = await fetch('https://internsss.app.n8n.cloud/webhook/LabelHistory');
+        if (response.ok) {
+            const data = await response.json();
+            historyDiv.innerHTML = renderLabelHistory(data);
+        } else {
+            historyDiv.innerHTML = 'Failed to load label history.';
+        }
+    } catch (error) {
+        historyDiv.innerHTML = 'Error loading label history.';
     }
+}
+
+function renderLabelHistory(history) {
+    if (!history || !Array.isArray(history) || history.length === 0) {
+        return '<p>No label history found.</p>';
+    }
+    return history.map(label => {
+        return `<div class="label-history-item"><pre>${JSON.stringify(label, null, 2)}</pre></div>`;
+    }).join('');
 }
 
 function handleChatKeyPress(event) {
