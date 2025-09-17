@@ -413,9 +413,31 @@ function showShippingLabelResponse(message, isError) {
 
 function formatLabelResponse(data) {
     if (!data) return 'No label data.';
-    if (typeof data === 'string') return data;
-    // Customize formatting as needed
-    return `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+    if (typeof data === 'string') {
+        try {
+            const parsed = JSON.parse(data);
+            return renderJsonObject(parsed);
+        } catch {
+            return data;
+        }
+    }
+    return renderJsonObject(data);
+}
+
+function renderJsonObject(obj) {
+    // Recursively render JSON as HTML, preview image_link if present
+    if (typeof obj !== 'object' || obj === null) {
+        return `<span>${String(obj)}</span>`;
+    }
+    if (Array.isArray(obj)) {
+        return `<ul>${obj.map(item => `<li>${renderJsonObject(item)}</li>`).join('')}</ul>`;
+    }
+    return `<ul>${Object.entries(obj).map(([key, value]) => {
+        if (key === 'image_link' && typeof value === 'string' && value.startsWith('http')) {
+            return `<li><strong>${key}:</strong><br><img src="${value}" alt="Label Image" style="max-width:220px;max-height:120px;border-radius:8px;margin:8px 0;" /></li>`;
+        }
+        return `<li><strong>${key}:</strong> ${renderJsonObject(value)}</li>`;
+    }).join('')}</ul>`;
 }
 
 async function fetchLabelHistory() {
