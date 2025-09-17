@@ -1,3 +1,147 @@
+/* Shipping Label Assistant - CRM Style */
+.shipping-label-container {
+    background: #f8fdfc;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(58,123,213,0.12);
+    padding: 32px 28px;
+    max-width: 1400px;
+    margin: 32px auto;
+    display: flex;
+    flex-direction: column;
+}
+.shipping-label-flex {
+    display: flex;
+    gap: 32px;
+    justify-content: space-between;
+    min-height: 480px;
+}
+.label-history-section {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(58,123,213,0.10);
+    padding: 24px 18px;
+    min-width: 320px;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+.label-history-section h4 {
+    font-size: 1.2rem;
+    color: #385a4f;
+    margin-bottom: 18px;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 8px;
+}
+.shipping-label-gen {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(58,123,213,0.10);
+    padding: 24px 18px;
+    min-width: 320px;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+#shipping-label-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+#shipping-label-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+#shipping-label-form label {
+    font-weight: 500;
+    color: #385a4f;
+}
+#shipping-label-form input[type="text"] {
+    padding: 10px 12px;
+    border: 1px solid #b8dacf;
+    border-radius: 7px;
+    font-size: 1rem;
+    background: #f7faf9;
+    transition: border-color 0.2s;
+}
+#shipping-label-form input[type="text"]:focus {
+    border-color: #385a4f;
+    outline: none;
+}
+.submit-btn {
+    background: linear-gradient(90deg, #90cfbd 0%, #385a4f 100%);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 12px 0;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(58,123,213,0.08);
+    transition: background 0.2s, transform 0.2s;
+}
+.submit-btn:hover {
+    background: linear-gradient(90deg, #385a4f 0%, #90cfbd 100%);
+    transform: translateY(-2px);
+}
+.label-response {
+    margin-top: 12px;
+    font-size: 1rem;
+    padding: 10px 14px;
+    border-radius: 7px;
+    background: #f7faf9;
+    box-shadow: 0 1px 4px rgba(58,123,213,0.05);
+    min-height: 32px;
+}
+.label-response .error {
+    color: #d32f2f;
+}
+.label-response .success {
+    color: #388e3c;
+}
+.label-history-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #eaf6f3;
+    border-radius: 7px;
+    padding: 12px 18px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(58,123,213,0.07);
+    font-size: 1rem;
+}
+.tracking-number {
+    color: #385a4f;
+    font-weight: 500;
+}
+.label-url-btn {
+    background: linear-gradient(90deg, #90cfbd 0%, #385a4f 100%);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 18px;
+    font-size: 0.98rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(58,123,213,0.08);
+    transition: background 0.2s, transform 0.2s;
+}
+.label-url-btn:hover {
+    background: linear-gradient(90deg, #385a4f 0%, #90cfbd 100%);
+    transform: translateY(-2px);
+}
+@media (max-width: 900px) {
+    .shipping-label-flex {
+        flex-direction: column;
+        gap: 18px;
+    }
+    .shipping-label-gen,
+    .label-history-section {
+        max-width: 100%;
+    }
+}
 /* Parallel columns for Shipping Label Assistant */
 .shipping-label-flex {
     display: flex;
