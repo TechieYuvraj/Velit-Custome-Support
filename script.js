@@ -407,8 +407,32 @@ async function handleShippingLabelSubmit(event) {
 function showShippingLabelResponse(message, isError) {
     const responseDiv = document.getElementById('shipping-label-response');
     if (responseDiv) {
-        responseDiv.innerHTML = `<div class="${isError ? 'error' : 'success'}">${message}</div>`;
+        if (isError) {
+            responseDiv.innerHTML = `<div class="error">${message}</div>`;
+        } else {
+            // If message is an object, render as horizontal bar
+            if (typeof message === 'object' && message !== null) {
+                responseDiv.innerHTML = renderShippingLabelBar(message);
+            } else {
+                // Try to parse JSON string
+                try {
+                    const obj = JSON.parse(message);
+                    responseDiv.innerHTML = renderShippingLabelBar(obj);
+                } catch {
+                    responseDiv.innerHTML = `<div class="success">${message}</div>`;
+                }
+            }
+        }
     }
+
+function renderShippingLabelBar(label) {
+    const tracking = label.trackingNumber ? label.trackingNumber : 'N/A';
+    const url = label.url ? label.url : null;
+    return `<div class="label-history-bar">
+        <span class="tracking-number">Tracking: <strong>${tracking}</strong></span>
+        ${url ? `<button class="label-url-btn" onclick="window.open('${url}', '_blank')">View Label</button>` : ''}
+    </div>`;
+}
 }
 
 function formatLabelResponse(data) {

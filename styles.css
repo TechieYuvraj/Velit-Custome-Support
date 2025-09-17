@@ -1,3 +1,29 @@
+/* Parallel columns for Shipping Label Assistant */
+.shipping-label-flex {
+    display: flex;
+    gap: 32px;
+    justify-content: space-between;
+}
+.shipping-label-gen {
+    flex: 1 1 0;
+    min-width: 280px;
+    max-width: 420px;
+}
+.label-history-section {
+    flex: 1 1 0;
+    min-width: 280px;
+    max-width: 420px;
+}
+@media (max-width: 900px) {
+    .shipping-label-flex {
+        flex-direction: column;
+        gap: 18px;
+    }
+    .shipping-label-gen,
+    .label-history-section {
+        max-width: 100%;
+    }
+}
 /* Label History Horizontal Bar Styles */
 .label-history-bar {
     display: flex;

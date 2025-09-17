@@ -150,25 +150,29 @@
                         <h3>Shipping Label Assistant</h3>
                     </div>
                     <div class="shipping-label-container">
-                        <form id="shipping-label-form">
-                            <div class="form-group">
-                                <label for="order-no">Order No:</label>
-                                <input type="text" id="order-no" name="order_no" required>
+                        <div class="shipping-label-flex">
+                            <div class="label-history-section">
+                                <h4>Label History</h4>
+                                <div id="label-history-list"></div>
                             </div>
-                            <div class="form-group">
-                                <label for="product-dimensions">Product Dimensions:</label>
-                                <input type="text" id="product-dimensions" name="product_dimensions" required>
+                            <div class="shipping-label-gen">
+                                <form id="shipping-label-form">
+                                    <div class="form-group">
+                                        <label for="order-no">Order No:</label>
+                                        <input type="text" id="order-no" name="order_no" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="product-dimensions">Product Dimensions:</label>
+                                        <input type="text" id="product-dimensions" name="product_dimensions" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="from-address">From Address:</label>
+                                        <input type="text" id="from-address" name="from_address" required>
+                                    </div>
+                                    <button type="submit" class="submit-btn">Generate Shipping Label</button>
+                                </form>
+                                <div id="shipping-label-response" class="label-response"></div>
                             </div>
-                            <div class="form-group">
-                                <label for="from-address">From Address:</label>
-                                <input type="text" id="from-address" name="from_address" required>
-                            </div>
-                            <button type="submit" class="submit-btn">Generate Shipping Label</button>
-                        </form>
-                        <div id="shipping-label-response" class="label-response"></div>
-                        <div class="label-history-section">
-                            <h4>Label History</h4>
-                            <div id="label-history-list"></div>
                         </div>
                     </div>
                 </div>
