@@ -287,15 +287,17 @@ function renderConversationDetail(conversation, type) {
 // Add this function to send status update to the webhook
 async function sendStatusUpdate(session_id, status) {
     showLoading();
+    // Only allow 'open' or 'closed' status
+    const normalizedStatus = (status && status.toLowerCase() === 'closed') ? 'closed' : 'open';
     const payload = {
         session_id: session_id,
-        status: status,
+        status: normalizedStatus,
         business_id: CONFIG.businessId,
         from_email: selectedConversation.from_email || selectedConversation.email || ''
     };
     try {
-        await fetch("https://internsss.app.n8n.cloud/webhook/StatusSaving", {
-            method: 'POST',
+        await fetch("https://internsss.app.n8n.cloud/webhook/UpdateStatus", {
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
             },
