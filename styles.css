@@ -1,3 +1,35 @@
+/* Label History Horizontal Bar Styles */
+.label-history-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #eaf6f3;
+    border-radius: 7px;
+    padding: 12px 18px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(58,123,213,0.07);
+    font-size: 1rem;
+}
+.tracking-number {
+    color: #385a4f;
+    font-weight: 500;
+}
+.label-url-btn {
+    background: linear-gradient(90deg, #90cfbd 0%, #385a4f 100%);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 18px;
+    font-size: 0.98rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(58,123,213,0.08);
+    transition: background 0.2s, transform 0.2s;
+}
+.label-url-btn:hover {
+    background: linear-gradient(90deg, #385a4f 0%, #90cfbd 100%);
+    transform: translateY(-2px);
+}
 /* Shipping Label Assistant Styles */
 .shipping-label-container {
     background: #fff;

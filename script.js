@@ -468,7 +468,12 @@ function renderLabelHistory(history) {
         return '<p>No label history found.</p>';
     }
     return history.map(label => {
-        return `<div class="label-history-item"><pre>${JSON.stringify(label, null, 2)}</pre></div>`;
+        const tracking = label.trackingNumber ? label.trackingNumber : 'N/A';
+        const url = label.url ? label.url : null;
+        return `<div class="label-history-bar">
+            <span class="tracking-number">Tracking: <strong>${tracking}</strong></span>
+            ${url ? `<button class="label-url-btn" onclick="window.open('${url}', '_blank')">View Label</button>` : ''}
+        </div>`;
     }).join('');
 }
 
