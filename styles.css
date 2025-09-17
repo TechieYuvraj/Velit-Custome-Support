@@ -36,7 +36,7 @@
 .shipping-label-gen {
     background: #fff;
     border-radius: 14px;
-    box-shadow: 0 4px 18px rgba(58,123,213,0.3);
+    box-shadow: 0 4px 18px rgba(58,123,213,0);
     padding: 24px 18px;
     min-width: 320px;
     max-width: 420px;
@@ -202,10 +202,10 @@
 }
 /* Shipping Label Assistant Styles */
 .shipping-label-container {
-    background: #fff;
+    background: #f8f9fa;
     border-radius: 14px;
-    box-shadow: 0 4px 18px rgba(58,123,213,0.10);
-    padding: 32px 28px;
+    box-shadow: 0 4px 18px rgba(58,123,213,0);
+    padding: 15px 15px;
 }
 
 .shipping-label-container h4 {
@@ -286,7 +286,7 @@
     background: #e2ecea;
     border-radius: 7px;
     padding: 16px 12px;
-    box-shadow: 0 1px 4px rgba(58,123,213,0.2);
+    box-shadow: 0 1px 4px rgba(58,123,213,0);
 }
 .label-history-item {
     background: #fff;
