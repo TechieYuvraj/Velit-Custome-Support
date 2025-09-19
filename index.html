@@ -87,10 +87,7 @@
                     <i class="fas fa-users"></i>
                     CRM Agent Chats
                 </button>
-                <button class="tab-btn" data-tab="shipping">
-                    <i class="fas fa-shipping-fast"></i>
-                    Shipping Label
-                </button>
+                <!-- Removed Shipping Label tab button -->
             </div>
 
             <!-- Tab Content -->
@@ -144,42 +141,34 @@
                     </div>
                 </div>
 
-                <!-- Shipping Label Section -->
-                <div id="shipping" class="tab-pane">
-                    <div class="section-header">
-                        <h3>Shipping Label Assistant</h3>
-                    </div>
-                    <div class="shipping-label-container">
-                        <div class="shipping-label-flex">
-                            <div class="label-history-section">
-                                <h4>Label History</h4>
-                                <div id="label-history-list"></div>
-                            </div>
-                            <div class="shipping-label-gen">
-                                <form id="shipping-label-form">
-                                    <div class="form-group">
-                                        <label for="order-no">Order No:</label>
-                                        <input type="text" id="order-no" name="order_no" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="product-dimensions">Product Dimensions:</label>
-                                        <input type="text" id="product-dimensions" name="product_dimensions" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="from-address">From Address:</label>
-                                        <input type="text" id="from-address" name="from_address" required>
-                                    </div>
-                                    <button type="submit" class="submit-btn">Generate Shipping Label</button>
-                                </form>
-                                <div id="shipping-label-response" class="label-response"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Removed Shipping Label Section -->
             </div>
         </section>
     </div>
 
+    <!-- Shipping Label Modal -->
+    <div id="shipping-label-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.45);z-index:2000;align-items:center;justify-content:center;">
+        <div style="background:#fff;padding:32px 24px;border-radius:16px;max-width:420px;width:90vw;box-shadow:0 8px 32px rgba(58,123,213,0.18);position:relative;">
+            <button id="close-shipping-label-modal" style="position:absolute;top:12px;right:12px;background:none;border:none;font-size:1.5rem;color:#888;cursor:pointer;">&times;</button>
+            <h3 style="margin-bottom:18px;color:#195744;">Create Shipping Label</h3>
+            <form id="modal-shipping-label-form">
+                <div class="form-group">
+                    <label for="modal-order-no">Order No:</label>
+                    <input type="text" id="modal-order-no" name="order_no" required>
+                </div>
+                <div class="form-group">
+                    <label for="modal-product-dimensions">Product Dimensions:</label>
+                    <input type="text" id="modal-product-dimensions" name="product_dimensions" required>
+                </div>
+                <div class="form-group">
+                    <label for="modal-from-address">From Address:</label>
+                    <input type="text" id="modal-from-address" name="from_address" required>
+                </div>
+                <button type="submit" class="submit-btn" style="width:100%;margin-top:12px;">Generate Shipping Label</button>
+            </form>
+            <div id="modal-shipping-label-response" class="label-response" style="margin-top:12px;"></div>
+        </div>
+    </div>
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loading-overlay">
         <div class="loading-spinner">

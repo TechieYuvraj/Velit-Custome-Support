@@ -1,3 +1,48 @@
+// Shipping Label Modal Logic
+function openShippingLabelModal(conversation) {
+    const modal = document.getElementById('shipping-label-modal');
+    modal.style.display = 'flex';
+    // Pre-fill order no and address if available
+    document.getElementById('modal-order-no').value = conversation.order_no || '';
+    document.getElementById('modal-from-address').value = conversation.sender_address || conversation.from_address || '';
+    document.getElementById('modal-product-dimensions').value = '';
+    document.getElementById('modal-shipping-label-response').innerHTML = '';
+}
+
+document.getElementById('close-shipping-label-modal').onclick = function() {
+    document.getElementById('shipping-label-modal').style.display = 'none';
+};
+
+document.getElementById('modal-shipping-label-form').onsubmit = async function(e) {
+    e.preventDefault();
+    const orderNo = document.getElementById('modal-order-no').value.trim();
+    const productDimensions = document.getElementById('modal-product-dimensions').value.trim();
+    const fromAddress = document.getElementById('modal-from-address').value.trim();
+    const responseDiv = document.getElementById('modal-shipping-label-response');
+    responseDiv.innerHTML = 'Generating label...';
+    try {
+        const payload = {
+            order_no: orderNo,
+            product_dimensions: productDimensions,
+            from_address: fromAddress
+        };
+        const response = await fetch(CONFIG.webhooks.shipping, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        });
+        if (response.ok) {
+            const data = await response.json();
+            responseDiv.innerHTML = formatLabelResponse(data);
+        } else {
+            responseDiv.innerHTML = '<span class="error">Failed to generate label. Please try again.</span>';
+        }
+    } catch (error) {
+        responseDiv.innerHTML = '<span class="error">Error: ' + error.message + '</span>';
+    }
+};
 // Dashboard Configuration
 const CONFIG = {
     webhooks: {
@@ -256,7 +301,16 @@ function renderConversationDetail(conversation, type) {
                 <input id="email-reply-input" type="text" placeholder="Type your reply..." style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc;">
                 <button id="email-reply-send" style="padding:8px 18px;border-radius:6px;background:#3a7bd5;color:#fff;border:none;cursor:pointer;">Send</button>
             </div>
+            <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+                <button id="create-shipping-label-btn" style="padding:8px 18px;border-radius:6px;background:#195744;color:#fff;border:none;cursor:pointer;">
+                    <i class="fas fa-shipping-fast"></i> Create Shipping Label
+                </button>
+            </div>
         `;
+        // Add event listener for shipping label button
+        document.getElementById('create-shipping-label-btn').onclick = function() {
+            openShippingLabelModal(conversation);
+        };
 
         // Add event listeners for sending email reply
         document.getElementById('email-reply-send').onclick = function() {
