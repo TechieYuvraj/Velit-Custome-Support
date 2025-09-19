@@ -20,6 +20,12 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     setDefaultDates();
     generateChatSessionId();
+    // Shipping Label Assistant Functions
+    const shippingForm = document.getElementById('shipping-label-form');
+    if (shippingForm) {
+        shippingForm.addEventListener('submit', handleShippingLabelSubmit);
+        fetchLabelHistory();
+    }
 });
 
 function initializeDashboard() {
@@ -141,7 +147,6 @@ function filterEmailConversations() {
 
 function renderEmailConversations(conversations) {
     const container = document.getElementById('email-conversations');
-    
     if (!conversations || conversations.length === 0) {
         container.innerHTML = `
             <div class="no-data">
@@ -151,7 +156,6 @@ function renderEmailConversations(conversations) {
         `;
         return;
     }
-
     container.innerHTML = conversations.map(conv => `
         <div class="conversation-item" onclick="selectConversation('${conv.conversation_id}', 'email')">
             <div class="conversation-header">
@@ -171,7 +175,6 @@ function renderEmailConversations(conversations) {
 // CRM Section Functions
 function renderCRMConversations(conversations) {
     const container = document.getElementById('crm-conversations');
-    
     if (!conversations || conversations.length === 0) {
         container.innerHTML = `
             <div class="no-data">
@@ -181,7 +184,6 @@ function renderCRMConversations(conversations) {
         `;
         return;
     }
-
     container.innerHTML = conversations.map(conv => `
         <div class="conversation-item" onclick="selectConversation('${conv.conversation_id}', 'crm')">
             <div class="conversation-header">
@@ -358,15 +360,7 @@ function renderMessages(messages) {
     }).join('');
 }
 
-// Shipping Label Chatbot Functions
-// Shipping Label Assistant Functions
-document.addEventListener('DOMContentLoaded', function() {
-    const shippingForm = document.getElementById('shipping-label-form');
-    if (shippingForm) {
-        shippingForm.addEventListener('submit', handleShippingLabelSubmit);
-        fetchLabelHistory();
-    }
-});
+// ...existing code...
 
 async function handleShippingLabelSubmit(event) {
     event.preventDefault();
