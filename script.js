@@ -487,15 +487,22 @@ function renderShippingLabelBar(label) {
 
 function formatLabelResponse(data) {
     if (!data) return 'No label data.';
-    if (typeof data === 'string') {
-        try {
-            const parsed = JSON.parse(data);
-            return renderJsonObject(parsed);
-        } catch {
-            return data;
-        }
-    }
-    return renderJsonObject(data);
+    // If response is an array, use the first item
+    const obj = Array.isArray(data) ? data[0] : data;
+    // Render only the required fields
+    return `
+        <div class="label-history-bar">
+        <ul>
+            <li><strong>Status:</strong> ${obj.status || 'N/A'}</li>
+            <li><strong>Request ID:</strong> ${obj.requestId || 'N/A'}</li>
+            <li><strong>Order ID:</strong> ${obj.orderId || 'N/A'}</li>
+            <li><strong>Carrier:</strong> ${obj.carrier || 'N/A'}</li>
+            <li><strong>Channel:</strong> ${obj.channel || 'N/A'}</li>
+            <li><strong>Tracking Number:</strong> ${obj.trackingNumber || 'N/A'}</li>
+            <li><strong>Label URL:</strong> ${obj.url ? `<a href="${obj.url}" target="_blank">View PDF</a>` : 'N/A'}</li>
+        </ul>
+        </div>
+    `;
 }
 
 function renderJsonObject(obj) {
@@ -733,18 +740,6 @@ function generateMockCRMData() {
             ]
         }
     ];
-}
-
-function generateMockChatResponse(userMessage) {
-    const responses = [
-        "I can help you with shipping labels! What type of shipment are you looking to create?",
-        "For shipping labels, I'll need some information about your package. What are the dimensions and weight?",
-        "I can assist with domestic and international shipping. Where are you shipping to?",
-        "Let me help you with that shipping label. Do you have the recipient's address ready?",
-        "I can generate shipping labels for various carriers. Which shipping service would you prefer?"
-    ];
-    
-    return responses[Math.floor(Math.random() * responses.length)];
 }
 
 async function sendEmailReply(conversation) {
