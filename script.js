@@ -1,31 +1,37 @@
 // Shipping Label Modal Logic
-async function openShippingLabelModal(conversation, orderDetails = {}) {
+async function openShippingLabelModal(conversation, orders = []) {
     const modal = document.getElementById('shipping-label-modal');
     modal.style.display = 'flex';
-    // Pre-fill all fields from orderDetails
-    document.getElementById('modal-order-no').value = orderDetails["Order Number"] || '';
     document.getElementById('modal-product-dimensions').value = '';
     document.getElementById('modal-shipping-label-response').innerHTML = '';
     // Remove any previous address fields
     let addressFields = document.querySelectorAll('.shipping-address-group');
     addressFields.forEach(f => f.remove());
-    // Insert address/name/phone fields below Order No
-    const orderNoGroup = document.getElementById('modal-order-no').parentElement;
-    const addressDiv = document.createElement('div');
-    addressDiv.className = 'shipping-address-group';
-    addressDiv.innerHTML = `
-        <div class="form-group"><label>Shipping Name:</label><input type="text" id="modal-shipping-name" value="${orderDetails["Shipping Name"] || ''}"></div>
-        <div class="form-group"><label>Address 1:</label><input type="text" id="modal-shipping-address1" value="${orderDetails["Shipping Address 1"] || ''}"></div>
-        <div class="form-group"><label>Address 2:</label><input type="text" id="modal-shipping-address2" value="${orderDetails["Shipping Address 2"] || ''}"></div>
-        <div class="form-group"><label>City:</label><input type="text" id="modal-shipping-city" value="${orderDetails["Shipping City"] || ''}"></div>
-        <div class="form-group"><label>State:</label><input type="text" id="modal-shipping-state" value="${orderDetails["Shipping State"] || ''}"></div>
-        <div class="form-group"><label>Country:</label><input type="text" id="modal-shipping-country" value="${orderDetails["Shipping Country"] || ''}"></div>
-        <div class="form-group"><label>Zipcode:</label><input type="text" id="modal-shipping-zipcode" value="${orderDetails["Shipping Zipcode"] || ''}"></div>
-        <div class="form-group"><label>Phone:</label><input type="text" id="modal-shipping-phone" value="${orderDetails["Phone"] || ''}"></div>
-        <div class="form-group"><label>Email:</label><input type="text" id="modal-shipping-email" value="${orderDetails["Email"] || ''}"></div>
-    `;
-    orderNoGroup.parentElement.insertBefore(addressDiv, orderNoGroup.nextSibling);
-
+    // Remove previous Order No dropdown if any
+    let orderNoGroup = document.getElementById('modal-order-no')?.parentElement;
+    let orderNoInput = document.getElementById('modal-order-no');
+    if (orders.length > 1) {
+        // Replace Order No input with dropdown
+        orderNoGroup.innerHTML = `<label for='modal-order-no'>Order No:</label><select id='modal-order-no'></select>`;
+        let orderNoSelect = document.getElementById('modal-order-no');
+        orders.forEach((order, idx) => {
+            let opt = document.createElement('option');
+            opt.value = order["Order Number"];
+            opt.textContent = order["Order Number"];
+            orderNoSelect.appendChild(opt);
+        });
+        // Render address fields for first order
+        renderShippingAddressFields(orders[0]);
+        // Change address fields on order change
+        orderNoSelect.onchange = function() {
+            let selectedOrder = orders.find(o => o["Order Number"] == this.value);
+            renderShippingAddressFields(selectedOrder);
+        };
+    } else {
+        // Single order, keep input
+        orderNoInput.value = orders[0]?.["Order Number"] || '';
+        renderShippingAddressFields(orders[0] || {});
+    }
     // Replace From Address input with dropdown in modal
     let fromAddressGroup = document.getElementById('modal-from-address')?.parentElement;
     if (fromAddressGroup) {
@@ -343,7 +349,7 @@ function renderConversationDetail(conversation, type) {
         document.getElementById('create-shipping-label-btn').onclick = async function() {
             // Fetch order info from webhook using email when button is clicked
             let email = conversation.email || conversation.sender_email || '';
-            let orderDetails = {};
+            let orders = [];
             if (email) {
                 try {
                     const response = await fetch('https://internsss.app.n8n.cloud/webhook/FetchOrderByEmail', {
@@ -353,15 +359,13 @@ function renderConversationDetail(conversation, type) {
                     });
                     if (response.ok) {
                         const data = await response.json();
-                        // If array, use first item
-                        const details = Array.isArray(data) ? data[0] : data;
-                        orderDetails = details || {};
+                        orders = Array.isArray(data) ? data : [data];
                     }
                 } catch (err) {
                     // Ignore errors, leave blank
                 }
             }
-            openShippingLabelModal(conversation, orderDetails);
+            openShippingLabelModal(conversation, orders);
         };
 
         // Add event listeners for sending email reply
@@ -466,7 +470,29 @@ function renderMessages(messages) {
     }).join('');
 }
 
-// ...existing code...
+// Shipping Address Fields Rendering
+function renderShippingAddressFields(orderDetails = {}) {
+    // Remove any previous address fields
+    let addressFields = document.querySelectorAll('.shipping-address-group');
+    addressFields.forEach(f => f.remove());
+    // Insert address/name/phone fields below Order No
+    let orderNoGroup = document.getElementById('modal-order-no')?.parentElement;
+    if (!orderNoGroup) return;
+    const addressDiv = document.createElement('div');
+    addressDiv.className = 'shipping-address-group';
+    addressDiv.innerHTML = `
+        <div class="form-group"><label>Shipping Name:</label><input type="text" id="modal-shipping-name" value="${orderDetails["Shipping Name"] || ''}"></div>
+        <div class="form-group"><label>Address 1:</label><input type="text" id="modal-shipping-address1" value="${orderDetails["Shipping Address 1"] || ''}"></div>
+        <div class="form-group"><label>Address 2:</label><input type="text" id="modal-shipping-address2" value="${orderDetails["Shipping Address 2"] || ''}"></div>
+        <div class="form-group"><label>City:</label><input type="text" id="modal-shipping-city" value="${orderDetails["Shipping City"] || ''}"></div>
+        <div class="form-group"><label>State:</label><input type="text" id="modal-shipping-state" value="${orderDetails["Shipping State"] || ''}"></div>
+        <div class="form-group"><label>Country:</label><input type="text" id="modal-shipping-country" value="${orderDetails["Shipping Country"] || ''}"></div>
+        <div class="form-group"><label>Zipcode:</label><input type="text" id="modal-shipping-zipcode" value="${orderDetails["Shipping Zipcode"] || ''}"></div>
+        <div class="form-group"><label>Phone:</label><input type="text" id="modal-shipping-phone" value="${orderDetails["Phone"] || ''}"></div>
+        <div class="form-group"><label>Email:</label><input type="text" id="modal-shipping-email" value="${orderDetails["Email"] || ''}"></div>
+    `;
+    orderNoGroup.parentElement.insertBefore(addressDiv, orderNoGroup.nextSibling);
+}
 
 async function handleShippingLabelSubmit(event) {
     event.preventDefault();
