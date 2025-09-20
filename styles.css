@@ -1,3 +1,125 @@
+/* Shipping Label Modal Two-Column Layout */
+#shipping-label-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.18);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+#shipping-label-modal > div {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.12);
+    width: 820px;
+    min-height: 520px;
+    max-height: 90vh;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+}
+
+#shipping-label-modal h3 {
+    font-size: 1.18rem;
+    font-weight: 600;
+    color: #195744;
+    margin-bottom: 16px;
+}
+
+#shipping-label-modal .form-group {
+    margin-bottom: 12px;
+}
+
+#shipping-label-modal label {
+    font-weight: 500;
+    margin-bottom: 4px;
+    display: block;
+}
+
+#shipping-label-modal input,
+#shipping-label-modal select {
+    width: 100%;
+    padding: 7px 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    margin-top: 2px;
+    font-size: 1rem;
+}
+
+#shipping-label-modal button[type="submit"] {
+    background: #195744;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 18px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+#shipping-label-modal #close-shipping-label-modal {
+    position: absolute;
+    top: 12px;
+    right: 18px;
+    font-size: 22px;
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    z-index: 2;
+    transition: color 0.2s;
+}
+#shipping-label-modal #close-shipping-label-modal:hover {
+    color: #195744;
+}
+
+#shipping-label-modal #modal-label-history-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+#shipping-label-modal .label-history-bar {
+    background: #f7f7f7;
+    border-radius: 7px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.98rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+#shipping-label-modal .tracking-number {
+    color: #195744;
+    font-weight: 600;
+}
+
+#shipping-label-modal .label-url-btn {
+    background: #3a7bd5;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 6px 14px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    margin-left: 12px;
+    transition: background 0.2s;
+}
+#shipping-label-modal .label-url-btn:hover {
+    background: #195744;
+}
+
+#shipping-label-modal #modal-shipping-label-response {
+    margin-top: 16px;
+    font-size: 1rem;
+}
 /* Shipping Label Assistant - CRM Style */
 .shipping-label-container {
     background: #f8fdfc;

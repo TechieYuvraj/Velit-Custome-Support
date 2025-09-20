@@ -2,25 +2,36 @@
 async function openShippingLabelModal(conversation, orders = []) {
     const modal = document.getElementById('shipping-label-modal');
     modal.style.display = 'flex';
-    document.getElementById('modal-product-dimensions').value = '';
-    document.getElementById('modal-shipping-label-response').innerHTML = '';
-    // Remove any previous address fields
-    let addressFields = document.querySelectorAll('.shipping-address-group');
-    addressFields.forEach(f => f.remove());
-    // Remove previous Order No field (dropdown or input)
-    let orderNoGroup = document.getElementById('modal-order-no')?.parentElement;
-    if (orderNoGroup) {
-        // Remove all children except label
-        Array.from(orderNoGroup.children).forEach(child => {
-            if (child.id === 'modal-order-no' || child.tagName === 'SELECT' || child.tagName === 'INPUT') {
-                child.remove();
-            }
-        });
-    }
-    // Rebuild Order No field
+    // Two-column layout: left for label history, right for label generation
+    modal.innerHTML = `
+        <div style="display:flex;width:100%;height:100%;">
+            <div style="flex:1;padding:24px 16px 24px 24px;border-right:1px solid #eee;overflow-y:auto;">
+                <h3 style="margin-bottom:16px;">Label History</h3>
+                <div id="modal-label-history-list">Loading...</div>
+            </div>
+            <div style="flex:1;padding:24px 24px 24px 16px;overflow-y:auto;">
+                <h3 style="margin-bottom:16px;">Generate Shipping Label</h3>
+                <form id="modal-shipping-label-form">
+                    <div id="modal-order-no-group"></div>
+                    <!-- Shipping address fields will be rendered here -->
+                    <div id="modal-shipping-address-fields"></div>
+                    <div class="form-group" id="modal-from-address-group"></div>
+                    <div class="form-group" id="modal-product-dimensions-group"></div>
+                    <button type="submit" style="margin-top:16px;padding:8px 18px;border-radius:6px;background:#195744;color:#fff;border:none;cursor:pointer;">Generate Label</button>
+                </form>
+                <div id="modal-shipping-label-response" style="margin-top:16px;"></div>
+            </div>
+            <button id="close-shipping-label-modal" style="position:absolute;top:12px;right:18px;font-size:22px;background:none;border:none;cursor:pointer;">&times;</button>
+        </div>
+    `;
+    // Close button event
+    document.getElementById('close-shipping-label-modal').onclick = function() {
+        modal.style.display = 'none';
+    };
+    // Rebuild Order No field in right column
+    let orderNoGroup = document.getElementById('modal-order-no-group');
     if (orders.length > 1) {
-        // Dropdown for multiple orders
-        let label = orderNoGroup.querySelector('label') || document.createElement('label');
+        let label = document.createElement('label');
         label.setAttribute('for', 'modal-order-no');
         label.textContent = 'Order No:';
         orderNoGroup.innerHTML = '';
@@ -40,8 +51,7 @@ async function openShippingLabelModal(conversation, orders = []) {
             renderShippingAddressFields(selectedOrder);
         };
     } else if (orders.length === 1) {
-        // Single order, input
-        let label = orderNoGroup.querySelector('label') || document.createElement('label');
+        let label = document.createElement('label');
         label.setAttribute('for', 'modal-order-no');
         label.textContent = 'Order No:';
         orderNoGroup.innerHTML = '';
@@ -53,8 +63,7 @@ async function openShippingLabelModal(conversation, orders = []) {
         orderNoGroup.appendChild(orderNoInput);
         renderShippingAddressFields(orders[0]);
     } else {
-        // No orders, input blank
-        let label = orderNoGroup.querySelector('label') || document.createElement('label');
+        let label = document.createElement('label');
         label.setAttribute('for', 'modal-order-no');
         label.textContent = 'Order No:';
         orderNoGroup.innerHTML = '';
@@ -67,7 +76,7 @@ async function openShippingLabelModal(conversation, orders = []) {
         renderShippingAddressFields({});
     }
     // Replace From Address input with dropdown in modal
-    let fromAddressGroup = document.getElementById('modal-from-address')?.parentElement;
+    let fromAddressGroup = document.getElementById('modal-from-address-group');
     if (fromAddressGroup) {
         fromAddressGroup.innerHTML = `
             <label for="modal-from-address">From Address:</label>
@@ -78,7 +87,7 @@ async function openShippingLabelModal(conversation, orders = []) {
         `;
     }
     // Replace Product Dimensions input with dropdown in modal
-    let productDimensionsGroup = document.getElementById('modal-product-dimensions')?.parentElement;
+    let productDimensionsGroup = document.getElementById('modal-product-dimensions-group');
     if (productDimensionsGroup) {
         productDimensionsGroup.innerHTML = `
             <label for="modal-product-dimensions">Product Dimensions:</label>
@@ -413,22 +422,47 @@ function renderConversationDetail(conversation, type) {
             // Fetch order info from webhook using email when button is clicked
             let email = conversation.email || conversation.sender_email || '';
             let orders = [];
+            let labelHistory = [];
             if (email) {
                 try {
-                    const response = await fetch('https://internsss.app.n8n.cloud/webhook/FetchOrderByEmail', {
+                    // Fetch orders for pre-fill
+                    const orderResponse = await fetch('https://internsss.app.n8n.cloud/webhook/FetchOrderByEmail', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email })
                     });
-                    if (response.ok) {
-                        const data = await response.json();
-                        orders = Array.isArray(data) ? data : [data];
+                    if (orderResponse.ok) {
+                        const orderData = await orderResponse.json();
+                        orders = Array.isArray(orderData) ? orderData : [orderData];
+                    }
+                } catch (err) {
+                    // Ignore errors, leave blank
+                }
+                try {
+                    // Fetch label history for this email
+                    const historyResponse = await fetch('https://internsss.app.n8n.cloud/webhook/LabelHistory', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email })
+                    });
+                    if (historyResponse.ok) {
+                        const historyData = await historyResponse.json();
+                        labelHistory = Array.isArray(historyData) ? historyData : [historyData];
                     }
                 } catch (err) {
                     // Ignore errors, leave blank
                 }
             }
             openShippingLabelModal(conversation, orders);
+            // Preview label history in the modal
+            const historyDiv = document.getElementById('modal-label-history-list');
+            if (historyDiv) {
+                if (labelHistory.length > 0) {
+                    historyDiv.innerHTML = renderLabelHistory(labelHistory);
+                } else {
+                    historyDiv.innerHTML = '<p>No label history found for this email.</p>';
+                }
+            }
         };
 
         // Add event listeners for sending email reply
