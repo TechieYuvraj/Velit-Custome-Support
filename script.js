@@ -7,30 +7,64 @@ async function openShippingLabelModal(conversation, orders = []) {
     // Remove any previous address fields
     let addressFields = document.querySelectorAll('.shipping-address-group');
     addressFields.forEach(f => f.remove());
-    // Remove previous Order No dropdown if any
+    // Remove previous Order No field (dropdown or input)
     let orderNoGroup = document.getElementById('modal-order-no')?.parentElement;
-    let orderNoInput = document.getElementById('modal-order-no');
+    if (orderNoGroup) {
+        // Remove all children except label
+        Array.from(orderNoGroup.children).forEach(child => {
+            if (child.id === 'modal-order-no' || child.tagName === 'SELECT' || child.tagName === 'INPUT') {
+                child.remove();
+            }
+        });
+    }
+    // Rebuild Order No field
     if (orders.length > 1) {
-        // Replace Order No input with dropdown
-        orderNoGroup.innerHTML = `<label for='modal-order-no'>Order No:</label><select id='modal-order-no'></select>`;
-        let orderNoSelect = document.getElementById('modal-order-no');
-        orders.forEach((order, idx) => {
+        // Dropdown for multiple orders
+        let label = orderNoGroup.querySelector('label') || document.createElement('label');
+        label.setAttribute('for', 'modal-order-no');
+        label.textContent = 'Order No:';
+        orderNoGroup.innerHTML = '';
+        orderNoGroup.appendChild(label);
+        let orderNoSelect = document.createElement('select');
+        orderNoSelect.id = 'modal-order-no';
+        orders.forEach(order => {
             let opt = document.createElement('option');
             opt.value = order["Order Number"];
             opt.textContent = order["Order Number"];
             orderNoSelect.appendChild(opt);
         });
-        // Render address fields for first order
+        orderNoGroup.appendChild(orderNoSelect);
         renderShippingAddressFields(orders[0]);
-        // Change address fields on order change
         orderNoSelect.onchange = function() {
             let selectedOrder = orders.find(o => o["Order Number"] == this.value);
             renderShippingAddressFields(selectedOrder);
         };
+    } else if (orders.length === 1) {
+        // Single order, input
+        let label = orderNoGroup.querySelector('label') || document.createElement('label');
+        label.setAttribute('for', 'modal-order-no');
+        label.textContent = 'Order No:';
+        orderNoGroup.innerHTML = '';
+        orderNoGroup.appendChild(label);
+        let orderNoInput = document.createElement('input');
+        orderNoInput.type = 'text';
+        orderNoInput.id = 'modal-order-no';
+        orderNoInput.value = orders[0]["Order Number"] || '';
+        orderNoGroup.appendChild(orderNoInput);
+        renderShippingAddressFields(orders[0]);
     } else {
-        // Single order, keep input
-        orderNoInput.value = orders[0]?.["Order Number"] || '';
-        renderShippingAddressFields(orders[0] || {});
+        // No orders, input blank
+        let label = orderNoGroup.querySelector('label') || document.createElement('label');
+        label.setAttribute('for', 'modal-order-no');
+        label.textContent = 'Order No:';
+        orderNoGroup.innerHTML = '';
+        orderNoGroup.appendChild(label);
+        let orderNoInput = document.createElement('input');
+        orderNoInput.type = 'text';
+        orderNoInput.id = 'modal-order-no';
+        orderNoInput.value = '';
+        orderNoGroup.appendChild(orderNoInput);
+        renderShippingAddressFields({});
     }
     // Replace From Address input with dropdown in modal
     let fromAddressGroup = document.getElementById('modal-from-address')?.parentElement;
@@ -43,6 +77,18 @@ async function openShippingLabelModal(conversation, orders = []) {
             </select>
         `;
     }
+    // Replace Product Dimensions input with dropdown in modal
+    let productDimensionsGroup = document.getElementById('modal-product-dimensions')?.parentElement;
+    if (productDimensionsGroup) {
+        productDimensionsGroup.innerHTML = `
+            <label for="modal-product-dimensions">Product Dimensions:</label>
+            <select id="modal-product-dimensions" name="product_dimensions">
+                <option value="Rooftop AC">Rooftop AC</option>
+                <option value="AC 13000 BTU">AC 13000 BTU</option>
+                <option value="Gas Heater">Gas Heater</option>
+            </select>
+        `;
+    }
 }
 
 document.getElementById('close-shipping-label-modal').onclick = function() {
@@ -51,16 +97,33 @@ document.getElementById('close-shipping-label-modal').onclick = function() {
 
 document.getElementById('modal-shipping-label-form').onsubmit = async function(e) {
     e.preventDefault();
+    // Get all fields from modal
     const orderNo = document.getElementById('modal-order-no').value.trim();
+    const shippingName = document.getElementById('modal-shipping-name')?.value.trim() || '';
+    const address1 = document.getElementById('modal-shipping-address1')?.value.trim() || '';
+    const address2 = document.getElementById('modal-shipping-address2')?.value.trim() || '';
+    const city = document.getElementById('modal-shipping-city')?.value.trim() || '';
+    const state = document.getElementById('modal-shipping-state')?.value.trim() || '';
+    const country = document.getElementById('modal-shipping-country')?.value.trim() || '';
+    const zipcode = document.getElementById('modal-shipping-zipcode')?.value.trim() || '';
+    const phone = document.getElementById('modal-shipping-phone')?.value.trim() || '';
+    const email = document.getElementById('modal-shipping-email')?.value.trim() || '';
     const productDimensions = document.getElementById('modal-product-dimensions').value.trim();
-    // Use To Address if present, else fallback to From Address
-    let toAddressInput = document.getElementById('modal-to-address');
-    const fromAddress = toAddressInput ? toAddressInput.value.trim() : document.getElementById('modal-from-address').value.trim();
+    const fromAddress = document.getElementById('modal-from-address').value.trim();
     const responseDiv = document.getElementById('modal-shipping-label-response');
     responseDiv.innerHTML = 'Generating label...';
     try {
         const payload = {
             order_no: orderNo,
+            shipping_name: shippingName,
+            address_1: address1,
+            address_2: address2,
+            city: city,
+            state: state,
+            country: country,
+            zipcode: zipcode,
+            phone: phone,
+            email: email,
             product_dimensions: productDimensions,
             from_address: fromAddress
         };
