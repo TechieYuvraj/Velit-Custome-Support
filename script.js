@@ -393,6 +393,11 @@ function renderConversationDetail(conversation, type) {
                             <span style="margin-left:8px;">Closed</span>
                         </label>
                     </span>
+                    <span style="margin-left:24px;">
+                        <button id="create-shipping-label-btn" style="padding:8px 18px;border-radius:6px;background:#195744;color:#fff;border:none;cursor:pointer;">
+                            <i class="fas fa-shipping-fast"></i> Create Shipping Label
+                        </button>
+                    </span>
                 </div>
             </div>
             <div class="messages-container">
@@ -401,11 +406,6 @@ function renderConversationDetail(conversation, type) {
             <div class="email-reply-box" style="margin-top:16px;display:flex;gap:8px;">
                 <input id="email-reply-input" type="text" placeholder="Type your reply..." style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc;">
                 <button id="email-reply-send" style="padding:8px 18px;border-radius:6px;background:#3a7bd5;color:#fff;border:none;cursor:pointer;">Send</button>
-            </div>
-            <div style="margin-top:16px;display:flex;justify-content:flex-end;">
-                <button id="create-shipping-label-btn" style="padding:8px 18px;border-radius:6px;background:#195744;color:#fff;border:none;cursor:pointer;">
-                    <i class="fas fa-shipping-fast"></i> Create Shipping Label
-                </button>
             </div>
         `;
         // Add event listener for shipping label button
