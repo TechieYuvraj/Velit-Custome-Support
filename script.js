@@ -149,7 +149,7 @@ const CONFIG = {
     webhooks: {
         email: 'https://internsss.app.n8n.cloud/webhook/fetchFromDB', // Unified webhook for both
         crm: 'https://internsss.app.n8n.cloud/webhook/fetchFromDB',   // Same as email
-        shipping: 'https://internsss.app.n8n.cloud/webhook-test/ShippingLabel'
+        shipping: 'https://internsss.app.n8n.cloud/webhook/ShippingLabel'
     },
     businessId: 'velit-camping-2027'
 };
