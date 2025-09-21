@@ -26,124 +26,109 @@
             </div>
         </header>
 
-        <!-- Status Cards -->
-        <section class="status-cards">
-            <div class="card">
-                <div class="card-icon">
-                    <i class="fas fa-ticket-alt"></i>
-                </div>
-                <div class="card-content">
-                    <h3>TOTAL TICKETS</h3>
-                    <div class="card-number" id="total-tickets">0</div>
-                    <p class="card-update">Updated: <span id="total-update-time">--:--</span></p>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-icon">
-                    <i class="fas fa-clock"></i>
-                </div>
-                <div class="card-content">
-                    <h3>OPEN TICKETS</h3>
-                    <div class="card-number" id="open-tickets">0</div>
-                    <p class="card-update">Updated: <span id="open-update-time">--:--</span></p>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-icon">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <div class="card-content">
-                    <h3>CLOSED TICKETS</h3>
-                    <div class="card-number" id="closed-tickets">0</div>
-                    <p class="card-update">Updated: <span id="closed-update-time">--:--</span></p>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-icon">
-                    <i class="fas fa-ellipsis-h"></i>
-                </div>
-                <div class="card-content">
-                    <h3>OTHER</h3>
-                    <div class="card-number" id="other-tickets">0</div>
-                    <p class="card-update">Updated: <span id="other-update-time">--:--</span></p>
-                </div>
-            </div>
-        </section>
+        <!-- Primary Navigation -->
+        <nav class="primary-nav">
+            <button class="nav-btn" data-view="order-history" id="nav-order-history">Order History</button>
+            <button class="nav-btn" data-view="shipping-requests" id="nav-shipping-requests">Shipping Requests</button>
+            <button class="nav-btn active" data-view="customer-support" id="nav-customer-support">Customer Support</button>
+        </nav>
 
-        <!-- Dashboard Pages Section -->
-        <section class="dashboard-pages">
-            <div class="pages-header">
-                <h2>Dashboard Pages</h2>
-                <p>Switch between different conversation types</p>
-            </div>
-            
-            <!-- Tab Navigation -->
-            <div class="tab-navigation">
-                <button class="tab-btn active" data-tab="emails">
-                    <i class="fas fa-envelope"></i>
-                    Emails
-                </button>
-                <button class="tab-btn" data-tab="crm">
-                    <i class="fas fa-users"></i>
-                    CRM Agent Chats
-                </button>
-                <!-- Removed Shipping Label tab button -->
-            </div>
+        <!-- View Containers -->
+        <main class="views-root">
+            <!-- Order History View (placeholder) -->
+            <section id="view-order-history" class="app-view" hidden>
+                <div class="view-header">
+                    <h2>Order History</h2>
+                    <div class="order-history-controls">
+                        <input type="text" id="order-search" placeholder="Search orders..." />
+                        <button id="create-shipping-request" class="primary-action">Create Shipping Request</button>
+                    </div>
+                </div>
+                <div id="order-cards" class="cards-grid"></div>
+            </section>
 
-            <!-- Tab Content -->
-            <div class="tab-content">
-                <!-- Email Section -->
-                <div id="emails" class="tab-pane active">
-                    <div class="section-header">
+            <!-- Shipping Requests View (placeholder) -->
+            <section id="view-shipping-requests" class="app-view" hidden>
+                <div class="view-header">
+                    <h2>Shipping Requests</h2>
+                    <div class="shipping-requests-filters">
+                        <input type="text" id="shipping-search" placeholder="Search shipping requests..." />
+                        <select id="shipping-status-filter">
+                            <option value="">All Statuses</option>
+                            <option value="open">Open</option>
+                            <option value="in_transit">In Transit</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="shipping-stats" id="shipping-stats"></div>
+                </div>
+                <div id="shipping-request-cards" class="cards-grid"></div>
+            </section>
+
+            <!-- Customer Support View (existing content transplanted) -->
+            <section id="view-customer-support" class="app-view">
+                <div class="customer-support-header">
+                    <div class="date-filters">
+                        <div class="date-input-group">
+                            <label for="from-date">From Date:</label>
+                            <input type="date" id="from-date" value="2024-01-01">
+                        </div>
+                        <div class="date-input-group">
+                            <label for="to-date">To Date:</label>
+                            <input type="date" id="to-date" value="2025-09-16">
+                        </div>
+                        <button class="filter-btn" id="filter-conversations-btn">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                    </div>
+                </div>
+                <div class="support-panels">
+                    <div class="panel">
                         <h3>Email Conversations</h3>
-                        <div class="date-filters">
-                            <div class="date-input-group">
-                                <label for="from-date">From Date:</label>
-                                <input type="date" id="from-date" value="2024-01-01">
-                            </div>
-                            <div class="date-input-group">
-                                <label for="to-date">To Date:</label>
-                                <input type="date" id="to-date" value="2025-09-16">
-                            </div>
-                            <button class="filter-btn" onclick="filterEmailConversations()">
-                                <i class="fas fa-filter"></i> Filter
-                            </button>
-                        </div>
-                    </div>
-                    <div class="conversations-container">
-                        <div class="conversations-list" id="email-conversations">
-                            <!-- Email conversations will be loaded here -->
-                        </div>
-                        <div class="conversation-detail" id="email-detail">
-                            <div class="detail-placeholder">
-                                <i class="fas fa-envelope-open"></i>
-                                <p>Select a conversation to view messages</p>
+                        <div class="conversations-container">
+                            <div class="conversations-list" id="email-conversations"></div>
+                            <div class="conversation-detail" id="email-detail">
+                                <div class="detail-placeholder">
+                                    <i class="fas fa-envelope-open"></i>
+                                    <p>Select a conversation to view messages</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- CRM Section -->
-                <div id="crm" class="tab-pane">
-                    <div class="section-header">
+                    <div class="panel">
                         <h3>CRM Agent Conversations</h3>
-                    </div>
-                    <div class="conversations-container">
-                        <div class="conversations-list" id="crm-conversations">
-                            <!-- CRM conversations will be loaded here -->
-                        </div>
-                        <div class="conversation-detail" id="crm-detail">
-                            <div class="detail-placeholder">
-                                <i class="fas fa-users"></i>
-                                <p>Select a conversation to view messages</p>
+                        <div class="conversations-container">
+                            <div class="conversations-list" id="crm-conversations"></div>
+                            <div class="conversation-detail" id="crm-detail">
+                                <div class="detail-placeholder">
+                                    <i class="fas fa-users"></i>
+                                    <p>Select a conversation to view messages</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Removed Shipping Label Section -->
-            </div>
-        </section>
+                <section class="ticket-stats-inline">
+                    <div class="card mini">
+                        <span class="label">Total</span>
+                        <span class="value" id="total-tickets">0</span>
+                    </div>
+                    <div class="card mini">
+                        <span class="label">Open</span>
+                        <span class="value" id="open-tickets">0</span>
+                    </div>
+                    <div class="card mini">
+                        <span class="label">Closed</span>
+                        <span class="value" id="closed-tickets">0</span>
+                    </div>
+                    <div class="card mini">
+                        <span class="label">Other</span>
+                        <span class="value" id="other-tickets">0</span>
+                    </div>
+                </section>
+            </section>
+        </main>
     </div>
 
     <!-- Shipping Label Modal -->
@@ -177,7 +162,6 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="script.js"></script>
+    <script type="module" src="./js/core/bootstrap.js"></script>
 </body>
 </html>

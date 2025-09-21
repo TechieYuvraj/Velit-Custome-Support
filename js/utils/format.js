@@ -1,0 +1,2 @@
+export function formatDate(dateString){ if(!dateString) return 'N/A'; const d=new Date(dateString); return d.toLocaleDateString()+ ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
+export function extractNameFromEmail(email){ if(!email||!email.includes('@')) return 'Unknown'; const local=email.split('@')[0]; return local.replace(/[._]/g,' ').replace(/\b\w/g,l=>l.toUpperCase()); }
