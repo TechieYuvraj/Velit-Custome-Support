@@ -23,4 +23,5 @@ export const api = {
   sendEmail: (payload) => request(ENDPOINTS.sendEmail, { body: payload }),
   fetchShipmentStatus: () => request(ENDPOINTS.shipmentStatus, { body: { business_id: BUSINESS_ID } })
   ,fetchOrderHistory: (sessionId, chatInput='Order History') => request(ENDPOINTS.orderHistory, { body: { chatInput, sessionId } })
+  ,fetchShippingRequests: (sessionId, chatInput='ShippingRequests') => request(ENDPOINTS.labelHistory, { body: { chatInput, sessionId } })
 };

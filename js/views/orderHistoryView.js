@@ -93,7 +93,7 @@ export function attachOrderHistoryHandlers(){
       const order = state.orders.find(o=>o.id===card.dataset.orderId);
       if(order){
         // For now just open modal prefilled with single order structure shape expected by modal
-        const adapted = [{ 'Order Number': order.id, 'Shipping Name': order.name, 'Shipping Address 1': order.address.line1, 'Shipping Address 2': order.address.line2, 'Shipping City': order.address.city, 'Shipping State': order.address.state, 'Shipping Country': order.address.country, 'Shipping Zipcode': order.address.zip, 'Phone': '', 'Email': order.email }];
+  const adapted = [{ 'Order Number': order.id, 'Shipping Name': order.name, 'Shipping Address 1': order.address.line1, 'Shipping Address 2': order.address.line2, 'Shipping City': order.address.city, 'Shipping State': order.address.state, 'Shipping Country': order.address.country, 'Shipping Zipcode': order.address.zip, 'Phone': order.phone || '', 'Email': order.email }];
         openShippingLabelModal(order.email, adapted, []);
       }
     }

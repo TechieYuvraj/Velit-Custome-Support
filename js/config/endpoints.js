@@ -15,7 +15,7 @@ export const BUSINESS_ID = 'velit-camping-2027';
 export const API_KEY_HEADER = 'x-n8n-apiKey';
 export const API_KEY_VALUE = '2025@urikaDeep@km@lik$$'; // TODO: inject real key
 
-export const FROM_ADDRESSES = ["Willy's Seattle", 'Deepak LA'];
+export const FROM_ADDRESSES = ["Willy Seattle", 'Deepak LA'];
 export const PRODUCT_DIMENSIONS = ['Rooftop AC', 'AC 13000 BTU', 'Gas Heater'];
 
 export const SHIPPING_REQUEST_STATUSES = ['open', 'in_transit', 'delivered', 'cancelled'];

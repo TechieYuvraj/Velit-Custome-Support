@@ -17,9 +17,10 @@ function ensureSubscribed(){
 export async function loadShippingRequests(){
   if(initialized) return; // fetch only once for now
   try {
-    const data = await api.fetchShipmentStatus();
-    // Expecting an array; normalize minimal fields
-    const list = Array.isArray(data) ? data.map(normalizeRequest) : [];
+    const sessionId = buildSessionId();
+    const data = await api.fetchShippingRequests(sessionId, 'ShippingRequests');
+    const array = Array.isArray(data) ? data : (data ? [data] : []);
+    const list = array.map(normalizeRequest).filter(Boolean);
     setState({ shippingRequests: list });
   } catch(err){
     console.error('Failed to load shipping requests', err);
@@ -28,16 +29,28 @@ export async function loadShippingRequests(){
   }
 }
 
+function buildSessionId(){
+  const d=new Date();
+  const pad=n=> String(n).padStart(2,'0');
+  return pad(d.getHours())+pad(d.getMinutes())+pad(d.getSeconds())+pad(d.getDate())+pad(d.getMonth()+1)+d.getFullYear();
+}
+
 function normalizeRequest(r){
-  // Accept multiple possible field names defensively
+  if(!r || typeof r !== 'object') return null;
+  // New shape sample:
+  // { Product, Status, trackingNumber, requestId, orderId, url, Email, Name }
+  const status = (r.Status || r.status || 'pending').toString().trim().toLowerCase().replace(/\s+/g,'_');
   return {
-    id: r.id || r.request_id || r.tracking_id || `REQ-${Math.random().toString(36).slice(2,8)}`,
-    email: r.email || r.user_email || '',
-    orderNo: r.order_no || r.orderNo || r.order_number || '',
-    name: r.name || r.customer_name || '',
-    status: (r.status || 'open').toLowerCase(),
-    createdAt: r.createdAt || r.created_at || r.timestamp || Date.now(),
-    address: r.address || r.shipping_address || '',
+    id: r.requestId || r.trackingNumber || r.orderId || `REQ-${Math.random().toString(36).slice(2,8)}`,
+    product: r.Product || r.product || '',
+    status,
+    trackingNumber: r.trackingNumber || r.tracking || '',
+    requestId: r.requestId || '',
+    orderId: r.orderId || '',
+    url: r.url || '',
+    email: r.Email || r.email || '',
+    name: r.Name || r.shipping_name || r['Shipping Name'] || r.name || '',
+    createdAt: r.Time || r.createdAt || r.created_at || Date.now()
   };
 }
 
@@ -48,7 +61,7 @@ function filtered(){
   // Sort newest first by createdAt (numeric) fallback by array order
   list.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
   if(term){
-    list = list.filter(r=> [r.id,r.orderNo,r.email,r.name,r.status,r.address].join(' ').toLowerCase().includes(term));
+    list = list.filter(r=> [r.id,r.trackingNumber,r.requestId,r.orderId,r.email,r.name,r.status,r.product].join(' ').toLowerCase().includes(term));
   }
   if(statusFilter){
     list = list.filter(r=> r.status === statusFilter);
@@ -75,13 +88,19 @@ export function renderShippingRequests(){
 function cardHtml(r){
   const countdown = r.status==='pending' ? remainingSeconds(r) : null;
   return `<div class="ship-req-card status-${r.status}">
-    <div class="sr-head"><h4>${r.orderNo || '(No Order)'} </h4><span class="sr-status">${r.status}${countdown!==null?` (${countdown}s)`:''}</span></div>
+    <div class="sr-head"><h4>${escapeHtml(r.product || '—')}</h4><span class="sr-status">${escapeHtml(r.status)}${countdown!==null?` (${countdown}s)`:''}</span></div>
     <div class="sr-meta">
-      <div><strong>${r.name || 'Unknown'}</strong><br><span class="email">${r.email}</span></div>
-      <div class="sr-id">${r.id}</div>
+      <div><strong>${escapeHtml(r.name || 'Unknown')}</strong><br><span class="email">${escapeHtml(r.email || '')}</span></div>
+      <div class="sr-id" title="Tracking Number">${escapeHtml(String(r.trackingNumber || 'N/A'))}</div>
     </div>
-    <div class="sr-address">${escapeHtml(r.address||'')}</div>
-    <div class="sr-footer"><small>${formatDate(r.createdAt)}${countdown!==null ? ` • Activates soon` : ''}</small></div>
+    <div class="sr-body-fields">
+      <div class="sr-line">${escapeHtml(r.requestId || '')}</div>
+      <div class="sr-line"><span class="order-id-label">Order ID:</span> <span>${escapeHtml(r.orderId || 'N/A')}</span></div>
+    </div>
+    <div class="sr-actions" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+      ${r.url ? `<button class="mini-btn" onclick="window.open('${r.url}','_blank')">Label</button>`:''}
+    </div>
+    <div class="sr-footer"><small>${formatDate(r.createdAt)}</small></div>
   </div>`;
 }
 

@@ -12,25 +12,31 @@ function ensureContainer(){
   return modal;
 }
 
-export async function openShippingLabelModal(email, orders = [], labelHistory = []){
+export async function openShippingLabelModal(email, orders = []){
   const modal = ensureContainer();
   modal.style.display='flex';
   modal.innerHTML = `
-    <div style="display:flex;width:90%;max-width:960px;height:80%;background:#fff;border-radius:12px;position:relative;box-shadow:0 8px 32px rgba(0,0,0,.15);">
-      <div style="flex:1;padding:20px 16px 20px 20px;border-right:1px solid #eee;overflow-y:auto;">
-        <h3 style="margin:0 0 12px;font-size:16px;font-weight:600;">Label History</h3>
-        <div id="modal-label-history-list">${labelHistory.length ? renderLabelHistory(labelHistory) : 'No history'}</div>
-      </div>
-      <div style="flex:1;padding:20px 20px 20px 16px;overflow-y:auto;">
-        <h3 style="margin:0 0 12px;font-size:16px;font-weight:600;">Generate Shipping Label</h3>
-        <form id="modal-shipping-label-form">
-          <div id="modal-order-no-group"></div>
+    <div style="display:flex;flex-direction:column;width:90%;max-width:920px;max-height:80%;background:#fff;border-radius:14px;position:relative;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden;">
+      <div style="display:flex;flex:1;min-height:0;">
+        <!-- Left column: order + selects -->
+        <div style="flex:1;padding:20px 18px 12px 22px;border-right:1px solid #eee;overflow-y:auto;">
+          <h3 style="margin:0 0 14px;font-size:16px;font-weight:600;">Shipping Request</h3>
+          <form id="modal-shipping-label-form" style="display:flex;flex-direction:column;height:100%;">
+            <div id="modal-order-no-group" class="form-group"></div>
+            <div class="form-group" id="modal-from-address-group"></div>
+            <div class="form-group" id="modal-product-dimensions-group"></div>
+            <div id="modal-left-spacer" style="flex:1;"></div>
+          </form>
+        </div>
+        <!-- Right column: name + address fields -->
+        <div style="flex:1;padding:20px 24px 12px 24px;overflow-y:auto;">
+          <h3 style="margin:0 0 14px;font-size:16px;font-weight:600;">Recipient Details</h3>
           <div id="modal-dynamic-address"></div>
-          <div class="form-group" id="modal-from-address-group"></div>
-          <div class="form-group" id="modal-product-dimensions-group"></div>
-          <button type="submit" class="primary-action" style="margin-top:16px;">Generate Label</button>
-        </form>
-        <div id="modal-shipping-label-response" style="margin-top:14px;font-size:13px;"></div>
+          <div id="modal-shipping-label-response" style="margin-top:10px;font-size:13px;"></div>
+        </div>
+      </div>
+      <div style="padding:12px 0 18px;display:flex;justify-content:center;border-top:1px solid #eee;background:#fafafa;">
+  <button type="submit" form="modal-shipping-label-form" class="primary-action" style="min-width:220px;">Create</button>
       </div>
       <button id="close-shipping-label-modal" aria-label="Close" style="position:absolute;top:8px;right:10px;font-size:22px;background:none;border:none;cursor:pointer;color:#444;">&times;</button>
     </div>`;
@@ -39,22 +45,31 @@ export async function openShippingLabelModal(email, orders = [], labelHistory = 
 
   buildOrderSelector(orders);
   buildStaticSelects();
+  // Prefill default selects if empty
+  const fromSel = modal.querySelector('#modal-from-address');
+  if(fromSel && !fromSel.value && fromSel.options.length) fromSel.selectedIndex = 0;
+  const prodSel = modal.querySelector('#modal-product-dimensions');
+  if(prodSel && !prodSel.value && prodSel.options.length) prodSel.selectedIndex = 0;
 
+  // Submission now tied to bottom button (form still left column)
   modal.querySelector('#modal-shipping-label-form').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const orderNo = document.getElementById('modal-order-no')?.value.trim();
     const payload = collectAddressPayload(orderNo, email);
     const respDiv = document.getElementById('modal-shipping-label-response');
     respDiv.textContent='Generating label...';
+    // Basic validation: all core fields must be present
+    const required = ['order_no','shipping_name','address_1','city','state','country','zipcode','phone','email','product_dimensions','from_address'];
+    const missing = required.filter(k=> !payload[k] && payload[k]!==0);
+    if(missing.length){
+      respDiv.innerHTML = `<span style='color:#b00020;'>Missing: ${missing.join(', ')}</span>`;
+      return;
+    }
     try {
-      await api.createShippingLabel(payload); // spec: ignore body
-      respDiv.innerHTML='<span style="color:#195744;font-weight:600;">Label request submitted.</span>';
-      // Optionally refresh history after delay
-      setTimeout(async ()=>{
-        try { const hist = await api.fetchLabelHistory(email); document.getElementById('modal-label-history-list').innerHTML = renderLabelHistory(Array.isArray(hist)?hist:[hist]); } catch{}
-      }, 1500);
+      await api.createShippingLabel(payload);
+      respDiv.innerHTML='<div style="color:#195744;font-weight:600;">Submitted.</div><pre style="margin-top:6px;background:#f5f5f5;padding:8px;border-radius:6px;max-height:140px;overflow:auto;font-size:11px;">'+escapeHtml(JSON.stringify(payload,null,2))+'</pre>';
     } catch(err){
-      respDiv.innerHTML = '<span style="color:#b00020;">Failed to submit label.</span>';
+      respDiv.innerHTML = '<span style="color:#b00020;">Failed to submit.</span>';
     }
   });
 }
@@ -122,11 +137,11 @@ function collectAddressPayload(order_no, email){
   };
 }
 
-export function renderLabelHistory(history){
-  if(!history || !history.length) return '<p>No label history found.</p>';
-  return history.map(label=>{
-    const tracking = label.trackingNumber || 'N/A';
-    const url = label.url;
-    return `<div class="label-history-bar"><span class="tracking-number">Tracking: <strong>${tracking}</strong></span>${url?` <button class="label-url-btn" onclick="window.open('${url}','_blank')">View Label</button>`:''}</div>`;
-  }).join('');
+function escapeHtml(str=''){
+  return str.replace(/["&'<>]/g, c=>({
+    '"':'&quot;','&':'&amp;','\'':'&#39;','<' :'&lt;','>' :'&gt;'
+  })[c]||c);
 }
+
+// History rendering removed from modal per new spec (keeping function stub if referenced elsewhere)
+export function renderLabelHistory(){ return ''; }
