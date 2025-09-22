@@ -34,20 +34,38 @@ function renderEmailDetail(host, conversation){
   const status = (conversation.status || '').trim() || 'Unknown';
   const statusClass = status ? 'status-' + status.toLowerCase() : 'status-na';
   host.innerHTML = `
-    <div class="detail-header" style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
-      <div class="detail-title" style="font-weight:600;">${subjectOrTopic}</div>
-      <div class="conv-status-pill ${statusClass}" style="padding:4px 10px;border-radius:14px;font-size:12px;background:#eef5f3;color:#195744;text-transform:capitalize;">${status}</div>
+    <div class="detail-header" style="position:sticky;top:0;z-index:5;background:#fff;padding:8px 5px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid #e2e8e5;border-radius: 10px;">
+      <div style="flex:1;min-width:0;">
+        <div class="detail-title" style="font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${subjectOrTopic}</div>
+        <div class="detail-info" style="margin-top:2px;font-size:12px;color:#345;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          <strong>${senderName}</strong> • ${contactInfo}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:90px;">
+        <span class="conv-status-pill ${statusClass}" style="text-transform:capitalize;">${status}</span>
+        <button id="toggle-status-btn" data-current="${status.toLowerCase()}" style="background:#195744;color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;">${status.toLowerCase()==='open'?'Close':'Reopen'}</button>
+      </div>
     </div>
-    <div class="detail-info" style="margin-top:4px;font-size:13px;color:#234;">
-      <strong>${senderName}</strong> • ${contactInfo}
+    <div class="messages-scroll-wrapper" style="position:relative;display:flex;flex-direction:column;gap:12px;padding-top:8px;">
+      <div class="messages-container" style="max-height:100vh;overflow-y:auto;padding-right:4px;">${renderMessages(conversation.messages||[])}</div>
     </div>
-    <div class="messages-container" style="margin-top:12px;">${renderMessages(conversation.messages||[])}</div>
-    <div class="email-reply-box" style="margin-top:16px;display:flex;gap:8px;">
-      <input id="email-reply-input" type="text" placeholder="Type your reply..." style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc;" />
-      <button id="email-reply-send" class="primary-action">Send</button>
+    <div class="email-reply-box" style="position:sticky;bottom:0;background:#fff;margin-top:5px;display:flex;gap:8px;border-top:10px solid #e2e8e5;">
+      <input id="email-reply-input" type="text" placeholder="Type your reply..." style="flex:1;padding:10px 12px;border-radius:6px;border:2px solid #cbd5d1;font-size:13px;" />
+      <button id="email-reply-send" class="primary-action" style="height:40px;">Send</button>
     </div>`;
   host.querySelector('#email-reply-send').onclick=()=>sendEmailReply(conversation);
   host.querySelector('#email-reply-input').addEventListener('keypress',e=>{ if(e.key==='Enter') sendEmailReply(conversation); });
+  const toggleBtn = host.querySelector('#toggle-status-btn');
+  if(toggleBtn){
+    toggleBtn.addEventListener('click', async ()=>{
+      const current = (conversation.status||'').toLowerCase();
+      const next = current==='open' ? 'closed' : 'open';
+      try { await api.updateStatus(conversation.session_id, next, conversation.from_email || conversation.email || '');
+        conversation.status = next.charAt(0).toUpperCase()+next.slice(1);
+        renderEmailDetail(host, conversation);
+      } catch(err){ console.warn('Status update failed', err); }
+    });
+  }
 }
 
 function renderCrmDetail(host, conversation){

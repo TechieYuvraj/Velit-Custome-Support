@@ -697,28 +697,20 @@ body {
     font-size: 0.95rem;
 }
 
-.conversation-status {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.7rem;
-    font-weight: 500;
-    text-transform: uppercase;
+.conversation-status, .conv-status-pill {
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: .5px;
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
 }
-
-.status-open {
-    background: #e0fef5;
-    color: #0e3a2d;
-}
-
-.status-closed {
-    background: #b8c5c2;
-    color: #0e3a2d;
-}
-
-.status-pending {
-    background: #fef9c3;
-    color: #b45309;
-}
+.status-open { background:#dcfce7; color:#065f46; border:1px solid #a7f3d0; }
+.status-closed { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+.status-pending, .status-na { background:#e0f2fe; color:#075985; border:1px solid #bae6fd; }
 
 .conversation-email {
     color: #666;
@@ -744,7 +736,7 @@ body {
 .conversation-detail {
     background: #e2ecea;
     border-radius: 12px;
-    padding: 20px;
+    padding: 10px;
     overflow-y: auto;
 }
 

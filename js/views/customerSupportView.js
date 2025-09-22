@@ -47,15 +47,17 @@ function emailItemHtml(conv){
   const status = (conv.status || '').trim();
   const subject = conv.subject || 'No subject';
   return `<div class="conversation-item" data-id="${conv.conversation_id}" data-type="email">
-    <div class="conversation-header" style="display:flex;justify-content:space-between;gap:8px;">
-      <div class="conversation-name" style="font-weight:600;">${escapeHtml(name)}</div>
-      <div class="conversation-date" style="font-size:11px;color:#567;">${date}</div>
+    <div class="conversation-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+      <div style="flex:1;min-width:0;">
+        <div class="conversation-name" style="font-weight:600;">${escapeHtml(name)}</div>
+        <div class="conversation-email" style="font-size:11px;color:#456;margin-top:2px;">${escapeHtml(email)}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+        <div class="conversation-date" style="font-size:11px;color:#567;white-space:nowrap;">${date}</div>
+        <span class="conversation-status status-${status.toLowerCase()||'na'}">${escapeHtml(status)}</span>
+      </div>
     </div>
-    <div class="conversation-email" style="font-size:12px;color:#345;">${escapeHtml(email)}</div>
-    <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
-      <span class="conversation-status status-${status.toLowerCase()||'na'}">${escapeHtml(status)}</span>
-    </div>
-    <div class="conversation-subject" style="margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(subject)}</div>
+    <div class="conversation-subject" style="margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;">${escapeHtml(subject)}</div>
   </div>`;
 }
 
