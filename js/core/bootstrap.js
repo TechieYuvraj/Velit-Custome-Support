@@ -22,20 +22,41 @@ function switchView(view){
 }
 
 async function initCustomerSupport(){
-  const fromInput = document.getElementById('from-date');
-  const toInput = document.getElementById('to-date');
-  if(fromInput && toInput){
-    if(!fromInput.value) fromInput.value='2024-01-01';
-    if(!toInput.value) toInput.value=new Date().toISOString().split('T')[0];
-    const [fromISO, toISO] = isoRange(fromInput.value, toInput.value);
-    try { await loadCustomerSupport(fromISO, toISO); } catch(err){ console.error(err); }
-  }
+  // Date filters removed; use defaults embedded in view loader
+  try { await loadCustomerSupport(); } catch(err){ console.error(err); }
 }
 
 function bindNav(){
   ['order-history','shipping-requests','customer-support'].forEach(v=>{
     const btn=document.getElementById(`nav-${v}`);
     if(btn) btn.addEventListener('click', ()=> switchView(v));
+  });
+}
+
+function bindCustomerSupportSubNav(){
+  const subButtons = document.querySelectorAll('.cs-sub-btn');
+  if(!subButtons.length) return;
+    const emailStatsBar = document.getElementById('email-stats-bar');
+    subButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const target = btn.getAttribute('data-cs');
+      // toggle active state
+      subButtons.forEach(b=> b.classList.remove('active'));
+      btn.classList.add('active');
+      // show/hide panels
+      document.querySelectorAll('[data-cs-panel]').forEach(panel=>{
+        if(panel.getAttribute('data-cs-panel') === target){
+          panel.style.display='block';
+        } else {
+          panel.style.display='none';
+        }
+      });
+        if(target==='email') {
+          if(emailStatsBar) emailStatsBar.style.display='flex';
+        } else {
+          if(emailStatsBar) emailStatsBar.style.display='none';
+        }
+    });
   });
 }
 
@@ -50,6 +71,7 @@ export async function initApp(){
   bindNav();
   attachConversationListHandlers();
   attachOrderHistoryHandlers();
+  bindCustomerSupportSubNav();
   bindFilters();
   await initCustomerSupport();
   switchView('customer-support');

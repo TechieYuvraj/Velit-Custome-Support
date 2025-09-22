@@ -69,24 +69,33 @@
 
             <!-- Customer Support View (existing content transplanted) -->
             <section id="view-customer-support" class="app-view">
-                <div class="customer-support-header">
-                    <div class="date-filters">
-                        <div class="date-input-group">
-                            <label for="from-date">From Date:</label>
-                            <input type="date" id="from-date" value="2024-01-01">
+                <div class="customer-support-header" style="display:flex;flex-direction:column;gap:12px;">
+                    <div id="cs-sub-bar" style="display:flex;border:1px solid #195744;border-radius:8px;overflow:hidden;width:100%;">
+                        <button type="button" class="cs-sub-btn active" data-cs="email" style="flex:1;padding:10px 0;background:#195744;color:#fff;border:none;font-weight:600;letter-spacing:.5px;cursor:pointer;">EMAIL</button>
+                        <button type="button" class="cs-sub-btn" data-cs="crm" style="flex:1;padding:10px 0;background:#ffffff;color:#195744;border:none;font-weight:600;letter-spacing:.5px;cursor:pointer;">CRM</button>
+                    </div>
+                    <div id="email-stats-bar" style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <div class="mini-stat" data-stat="total" style="background:#f4f7f6;border:1px solid #d6e3de;padding:8px 12px;border-radius:8px;display:flex;flex-direction:column;min-width:90px;">
+                            <span style="font-size:11px;color:#567;">Total</span>
+                            <strong id="cs-total" style="font-size:16px;">0</strong>
                         </div>
-                        <div class="date-input-group">
-                            <label for="to-date">To Date:</label>
-                            <input type="date" id="to-date" value="2025-09-16">
+                        <div class="mini-stat" data-stat="open" style="background:#f4f7f6;border:1px solid #d6e3de;padding:8px 12px;border-radius:8px;display:flex;flex-direction:column;min-width:90px;">
+                            <span style="font-size:11px;color:#567;">Open</span>
+                            <strong id="cs-open" style="font-size:16px;">0</strong>
                         </div>
-                        <button class="filter-btn" id="filter-conversations-btn">
-                            <i class="fas fa-filter"></i> Filter
-                        </button>
+                        <div class="mini-stat" data-stat="closed" style="background:#f4f7f6;border:1px solid #d6e3de;padding:8px 12px;border-radius:8px;display:flex;flex-direction:column;min-width:90px;">
+                            <span style="font-size:11px;color:#567;">Closed</span>
+                            <strong id="cs-closed" style="font-size:16px;">0</strong>
+                        </div>
+                        <div class="mini-stat" data-stat="pending" style="background:#f4f7f6;border:1px solid #d6e3de;padding:8px 12px;border-radius:8px;display:flex;flex-direction:column;min-width:90px;">
+                            <span style="font-size:11px;color:#567;">Pending</span>
+                            <strong id="cs-pending" style="font-size:16px;">0</strong>
+                        </div>
                     </div>
                 </div>
                 <div class="support-panels">
-                    <div class="panel">
-                        <h3>Email Conversations</h3>
+                    <div class="panel" id="panel-email" data-cs-panel="email">
+                        <h3 style="display:none;">Email Conversations</h3>
                         <div class="conversations-container">
                             <div class="conversations-list" id="email-conversations"></div>
                             <div class="conversation-detail" id="email-detail">
@@ -97,8 +106,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="panel">
-                        <h3>CRM Agent Conversations</h3>
+                    <div class="panel" id="panel-crm" data-cs-panel="crm" style="display:none;">
+                        <h3 style="display:none;">CRM Agent Conversations</h3>
                         <div class="conversations-container">
                             <div class="conversations-list" id="crm-conversations"></div>
                             <div class="conversation-detail" id="crm-detail">
@@ -110,24 +119,7 @@
                         </div>
                     </div>
                 </div>
-                <section class="ticket-stats-inline">
-                    <div class="card mini">
-                        <span class="label">Total</span>
-                        <span class="value" id="total-tickets">0</span>
-                    </div>
-                    <div class="card mini">
-                        <span class="label">Open</span>
-                        <span class="value" id="open-tickets">0</span>
-                    </div>
-                    <div class="card mini">
-                        <span class="label">Closed</span>
-                        <span class="value" id="closed-tickets">0</span>
-                    </div>
-                    <div class="card mini">
-                        <span class="label">Other</span>
-                        <span class="value" id="other-tickets">0</span>
-                    </div>
-                </section>
+                <!-- Legacy inline stats removed; counts now in mini stat bar -->
             </section>
         </main>
     </div>

@@ -1,7 +1,6 @@
 import { api } from '../core/api.js';
 import { state, setState } from '../core/state.js';
 import { formatDate, extractNameFromEmail } from '../utils/format.js';
-import { openShippingLabelModal } from './shippingLabelModal.js';
 
 export function attachConversationListHandlers(){
   document.addEventListener('click',(e)=>{
@@ -32,39 +31,23 @@ function renderEmailDetail(host, conversation){
   const senderName = conversation.name || extractNameFromEmail(conversation.sender_email || conversation.email || 'Unknown');
   const contactInfo = conversation.sender_email || conversation.email || 'No email';
   const subjectOrTopic = conversation.subject || 'No subject';
-  const isOpen = (conversation.status||'').toLowerCase()==='open';
+  const status = (conversation.status || '').trim() || 'Unknown';
+  const statusClass = status ? 'status-' + status.toLowerCase() : 'status-na';
   host.innerHTML = `
-    <div class="detail-header">
-      <div class="detail-title">${subjectOrTopic}</div>
-      <div class="detail-info">
-        <strong>${senderName}</strong> • ${contactInfo}
-        <span style="margin-left:16px;">
-          <label class="status-toggle-label">
-            <span style="margin-right:8px;">Open</span>
-            <input type="checkbox" id="status-toggle" ${isOpen?'checked':''} />
-            <span class="status-toggle-slider"></span>
-            <span style="margin-left:8px;">Closed</span>
-          </label>
-        </span>
-        <span style="margin-left:24px;">
-          <button id="create-shipping-label-btn" class="primary-action">
-            <i class="fas fa-shipping-fast"></i> Create Shipping Label
-          </button>
-        </span>
-      </div>
+    <div class="detail-header" style="display:flex;justify-content:space-between;align-items:center;gap:16px;">
+      <div class="detail-title" style="font-weight:600;">${subjectOrTopic}</div>
+      <div class="conv-status-pill ${statusClass}" style="padding:4px 10px;border-radius:14px;font-size:12px;background:#eef5f3;color:#195744;text-transform:capitalize;">${status}</div>
     </div>
-    <div class="messages-container">${renderMessages(conversation.messages||[])}</div>
+    <div class="detail-info" style="margin-top:4px;font-size:13px;color:#234;">
+      <strong>${senderName}</strong> • ${contactInfo}
+    </div>
+    <div class="messages-container" style="margin-top:12px;">${renderMessages(conversation.messages||[])}</div>
     <div class="email-reply-box" style="margin-top:16px;display:flex;gap:8px;">
       <input id="email-reply-input" type="text" placeholder="Type your reply..." style="flex:1;padding:8px;border-radius:6px;border:1px solid #ccc;" />
       <button id="email-reply-send" class="primary-action">Send</button>
     </div>`;
-  host.querySelector('#create-shipping-label-btn').onclick=()=>prepareShippingModal(conversation);
   host.querySelector('#email-reply-send').onclick=()=>sendEmailReply(conversation);
   host.querySelector('#email-reply-input').addEventListener('keypress',e=>{ if(e.key==='Enter') sendEmailReply(conversation); });
-  host.querySelector('#status-toggle').onchange=()=>{
-    const newStatus = host.querySelector('#status-toggle').checked? 'open':'closed';
-    api.updateStatus(conversation.session_id, newStatus, conversation.from_email || conversation.email || '').catch(()=>{});
-  };
 }
 
 function renderCrmDetail(host, conversation){
@@ -96,15 +79,7 @@ function renderMessages(messages){
   }).join('');
 }
 
-async function prepareShippingModal(conversation){
-  const email = conversation.email || conversation.sender_email || '';
-  let orders=[]; let history=[];
-  if(email){
-    try { const orderData = await api.fetchOrdersByEmail(email); orders = Array.isArray(orderData)? orderData : [orderData]; } catch{}
-    try { const historyData = await api.fetchLabelHistory(email); history = Array.isArray(historyData)? historyData : [historyData]; } catch{}
-  }
-  openShippingLabelModal(email, orders, history);
-}
+// Shipping label creation removed per latest UI instruction
 
 async function sendEmailReply(conversation){
   const input=document.getElementById('email-reply-input'); if(!input) return; const content=input.value.trim(); if(!content) return;
