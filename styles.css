@@ -1188,3 +1188,8 @@ select#shipping-status-filter {padding:10px 14px;border:1px solid #b8dacf;border
     input#order-search, input#shipping-search, select#shipping-status-filter {width:100%;}
     .cards-grid {grid-template-columns:repeat(auto-fill,minmax(170px,1fr));}
 }
+
+/* Email / CRM sub navigation */
+#cs-sub-bar .cs-sub-btn {background:#ffffff;color:#195744;border:none;font-weight:600;letter-spacing:.5px;cursor:pointer;transition:background .25s,color .25s;}
+#cs-sub-bar .cs-sub-btn.active {background:#195744;color:#ffffff;}
+#cs-sub-bar .cs-sub-btn:not(.active):hover {background:#e6f3ef;}
