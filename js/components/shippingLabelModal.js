@@ -142,6 +142,3 @@ function escapeHtml(str=''){
     '"':'&quot;','&':'&amp;','\'':'&#39;','<' :'&lt;','>' :'&gt;'
   })[c]||c);
 }
-
-// History rendering removed from modal per new spec (keeping function stub if referenced elsewhere)
-export function renderLabelHistory(){ return ''; }

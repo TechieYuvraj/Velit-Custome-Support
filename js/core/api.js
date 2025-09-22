@@ -21,7 +21,6 @@ export const api = {
   fetchLabelHistory: (email) => request(ENDPOINTS.labelHistory, { body: email ? { email } : {} }),
   updateStatus: (session_id, status, from_email) => request(ENDPOINTS.updateStatus, { method: 'PATCH', body: { session_id, status, business_id: BUSINESS_ID, from_email } }),
   sendEmail: (payload) => request(ENDPOINTS.sendEmail, { body: payload }),
-  fetchShipmentStatus: () => request(ENDPOINTS.shipmentStatus, { body: { business_id: BUSINESS_ID } })
-  ,fetchOrderHistory: (sessionId, chatInput='Order History') => request(ENDPOINTS.orderHistory, { body: { chatInput, sessionId } })
-  ,fetchShippingRequests: (sessionId, chatInput='ShippingRequests') => request(ENDPOINTS.labelHistory, { body: { chatInput, sessionId } })
+  fetchOrderHistory: (sessionId, chatInput='Order History') => request(ENDPOINTS.orderHistory, { body: { chatInput, sessionId } }),
+  fetchShippingRequests: (sessionId, chatInput='ShippingRequests') => request(ENDPOINTS.labelHistory, { body: { chatInput, sessionId } })
 };

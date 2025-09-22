@@ -51,10 +51,12 @@ The system emphasizes resilience, modularity, and an iterative build style. Ever
   /core          -> api.js, state.js, bootstrap.js (app init + navigation)
   /utils         -> format helpers (date formatting, name extraction)
   /views         -> orderHistoryView.js, shippingRequestsView.js, customerSupportView.js
-  /components    -> conversationDetail.js, shippingLabelModal.js
+  /components    -> conversationDetail.js, shippingLabelModal.js, shipRequestModal.js
 index.html       -> Root layout + view containers + sub navigation
 styles.css       -> Global styles + component + variant styling
-script.js        -> Legacy monolithic (retained for reference; superseded)
+
+Removed During Cleanup:
+- script.js (legacy monolith) – fully superseded by modular structure.
 ```
 Key principles:
 - Views own data loading & high-level rendering.
@@ -90,7 +92,7 @@ Endpoints (from `config/endpoints.js`):
 - `FetchOrderByEmail`
 - `UpdateStatus` (Conversation open/close)
 - `sendEmail`
-- (Legacy) `ShipmentStatus` (replaced by `LabelHistory`)
+  (Removed) `ShipmentStatus` legacy endpoint (list now sourced via `LabelHistory`).
 
 Invocation Patterns:
 ```

@@ -6,7 +6,6 @@ export const ENDPOINTS = {
   labelHistory: 'https://internsss.app.n8n.cloud/webhook/LabelHistory',
   updateStatus: 'https://internsss.app.n8n.cloud/webhook/UpdateStatus',
   sendEmail: 'https://internsss.app.n8n.cloud/webhook/sendEmail',
-  shipmentStatus: 'https://internsss.app.n8n.cloud/webhook/ShipmentStatus', // assumed new endpoint for shipping request list
   orderHistory: 'https://internsss.app.n8n.cloud/webhook/FetchOrderHistory'
 };
 
