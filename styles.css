@@ -1193,3 +1193,12 @@ select#shipping-status-filter {padding:10px 14px;border:1px solid #b8dacf;border
 #cs-sub-bar .cs-sub-btn {background:#ffffff;color:#195744;border:none;font-weight:600;letter-spacing:.5px;cursor:pointer;transition:background .25s,color .25s;}
 #cs-sub-bar .cs-sub-btn.active {background:#195744;color:#ffffff;}
 #cs-sub-bar .cs-sub-btn:not(.active):hover {background:#e6f3ef;}
+
+/* === Consolidated Inline Styles (extracted from index.html) === */
+.stack-col {display:flex;flex-direction:column;gap:12px;}
+.cs-sub-bar-shell {display:flex;border:1px solid #195744;border-radius:8px;overflow:hidden;width:100%;}
+.cs-sub-btn-flex {flex:1;padding:10px 0;}
+.mini-stats-row {display:flex;gap:8px;flex-wrap:wrap;}
+.mini-stat {background:#f4f7f6;border:1px solid #d6e3de;padding:8px 12px;border-radius:8px;display:flex;flex-direction:column;min-width:90px;}
+.mini-stat-label {font-size:11px;color:#567;}
+.mini-stat-value {font-size:16px;}

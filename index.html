@@ -69,27 +69,27 @@
 
             <!-- Customer Support View (existing content transplanted) -->
             <section id="view-customer-support" class="app-view">
-                <div class="customer-support-header" style="display:flex;flex-direction:column;gap:12px;">
-                    <div id="cs-sub-bar" style="display:flex;border:1px solid #195744;border-radius:8px;overflow:hidden;width:100%;">
-                        <button type="button" class="cs-sub-btn active" data-cs="email" style="flex:1;padding:10px 0;">EMAIL</button>
-                        <button type="button" class="cs-sub-btn" data-cs="crm" style="flex:1;padding:10px 0;">CRM</button>
+                <div class="customer-support-header stack-col">
+                    <div id="cs-sub-bar" class="cs-sub-bar-shell">
+                        <button type="button" class="cs-sub-btn active cs-sub-btn-flex" data-cs="email">EMAIL</button>
+                        <button type="button" class="cs-sub-btn cs-sub-btn-flex" data-cs="crm">CRM</button>
                     </div>
-                    <div id="email-stats-bar" style="display:flex;gap:8px;flex-wrap:wrap;">
-                        <div class="mini-stat" data-stat="total" style="background:#f4f7f6;border:1px solid #d6e3de;padding:8px 12px;border-radius:8px;display:flex;flex-direction:column;min-width:90px;">
-                            <span style="font-size:11px;color:#567;">Total</span>
-                            <strong id="cs-total" style="font-size:16px;">0</strong>
+                    <div id="email-stats-bar" class="mini-stats-row">
+                        <div class="mini-stat" data-stat="total">
+                            <span class="mini-stat-label">Total</span>
+                            <strong id="cs-total" class="mini-stat-value">0</strong>
                         </div>
-                        <div class="mini-stat" data-stat="open" style="background:#f4f7f6;border:1px solid #d6e3de;padding:8px 12px;border-radius:8px;display:flex;flex-direction:column;min-width:90px;">
-                            <span style="font-size:11px;color:#567;">Open</span>
-                            <strong id="cs-open" style="font-size:16px;">0</strong>
+                        <div class="mini-stat" data-stat="open">
+                            <span class="mini-stat-label">Open</span>
+                            <strong id="cs-open" class="mini-stat-value">0</strong>
                         </div>
-                        <div class="mini-stat" data-stat="closed" style="background:#f4f7f6;border:1px solid #d6e3de;padding:8px 12px;border-radius:8px;display:flex;flex-direction:column;min-width:90px;">
-                            <span style="font-size:11px;color:#567;">Closed</span>
-                            <strong id="cs-closed" style="font-size:16px;">0</strong>
+                        <div class="mini-stat" data-stat="closed">
+                            <span class="mini-stat-label">Closed</span>
+                            <strong id="cs-closed" class="mini-stat-value">0</strong>
                         </div>
-                        <div class="mini-stat" data-stat="pending" style="background:#f4f7f6;border:1px solid #d6e3de;padding:8px 12px;border-radius:8px;display:flex;flex-direction:column;min-width:90px;">
-                            <span style="font-size:11px;color:#567;">Pending</span>
-                            <strong id="cs-pending" style="font-size:16px;">0</strong>
+                        <div class="mini-stat" data-stat="pending">
+                            <span class="mini-stat-label">Pending</span>
+                            <strong id="cs-pending" class="mini-stat-value">0</strong>
                         </div>
                     </div>
                 </div>
