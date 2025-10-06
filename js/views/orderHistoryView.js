@@ -2,6 +2,7 @@ import { state, setState } from '../core/state.js';
 import { openShippingLabelModal } from '../components/shippingLabelModal.js';
 import { api } from '../core/api.js';
 import { openShipRequestModal } from '../components/shipRequestModal.js';
+import { withButtonLoader } from '../utils/loader.js';
 
 // Placeholder mock orders until endpoint confirmed
 function mockOrders(){
@@ -48,10 +49,10 @@ function updateOrdersMeta(){
     (source!=='live' ? ' <button id="retry-orders" class="mini-btn" style="margin-left:8px;">Retry</button>' : '');
   const retryBtn = document.getElementById('retry-orders');
   if(retryBtn){
-    retryBtn.addEventListener('click', ()=>{
-      retryBtn.disabled = true;
-      retryBtn.textContent = 'Retrying...';
-      loadOrders({ retry:true });
+    retryBtn.addEventListener('click', async ()=>{
+      await withButtonLoader(retryBtn, async () => {
+        await loadOrders({ retry:true });
+      }, 'Retrying...');
     });
   }
 }

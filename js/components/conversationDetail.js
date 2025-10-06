@@ -1,6 +1,7 @@
 import { api } from '../core/api.js';
 import { state, setState } from '../core/state.js';
 import { formatDate, extractNameFromEmail } from '../utils/format.js';
+import { showLoader, hideLoader, withButtonLoader } from '../utils/loader.js';
 
 export function attachConversationListHandlers(){
   document.addEventListener('click',(e)=>{
@@ -16,6 +17,12 @@ async function selectConversation(id, type){
   const list = type==='crm'? state.crmConversations : state.emailConversations;
   const conv = list.find(c=>c.conversation_id===id);
   if(!conv) return;
+  
+  // Show loader on the detail panel
+  const detailContainer = document.getElementById(type === 'email' ? 'email-detail' : 'crm-detail');
+  if (detailContainer) {
+    showLoader(detailContainer, 'section', 'Loading conversation...');
+  }
   
   // If conversation doesn't have messages, fetch them
   if (!conv.messages || conv.messages.length === 0) {
@@ -92,10 +99,12 @@ function renderEmailDetail(host, conversation){
     toggleBtn.addEventListener('click', async ()=>{
       const current = (conversation.status||'').toLowerCase();
       const next = current==='open' ? 'closed' : 'open';
-      try { await api.updateStatus(conversation.session_id, next, conversation.from_email || conversation.email || '');
+      
+      await withButtonLoader(toggleBtn, async () => {
+        await api.updateStatus(conversation.session_id, next, conversation.from_email || conversation.email || '');
         conversation.status = next.charAt(0).toUpperCase()+next.slice(1);
         renderEmailDetail(host, conversation);
-      } catch(err){ console.warn('Status update failed', err); }
+      }, 'Updating...');
     });
   }
 }
@@ -151,8 +160,24 @@ function renderMessages(messages){
 // Shipping label creation removed per latest UI instruction
 
 async function sendEmailReply(conversation){
-  const input=document.getElementById('email-reply-input'); if(!input) return; const content=input.value.trim(); if(!content) return;
-  const lastMsg = (conversation.messages && conversation.messages.length)? conversation.messages[conversation.messages.length-1]:{};
-  const payload = { "to-email": conversation.email || conversation.sender_email || '', message_id: lastMsg.message_id || '', thread_id: conversation.conversation_id || '', "from-email": conversation.agent_email || 'support@velit.com', subject: conversation.subject || '', content };
-  try { await api.sendEmail(payload); input.value=''; } catch(err){ console.warn('Email send failed', err); }
+  const input = document.getElementById('email-reply-input'); 
+  if (!input) return; 
+  const content = input.value.trim(); 
+  if (!content) return;
+  
+  const sendButton = document.getElementById('email-reply-send');
+  
+  await withButtonLoader(sendButton, async () => {
+    const lastMsg = (conversation.messages && conversation.messages.length) ? conversation.messages[conversation.messages.length-1] : {};
+    const payload = { 
+      "to-email": conversation.email || conversation.sender_email || '', 
+      message_id: lastMsg.message_id || '', 
+      thread_id: conversation.conversation_id || '', 
+      "from-email": conversation.agent_email || 'support@velit.com', 
+      subject: conversation.subject || '', 
+      content 
+    };
+    await api.sendEmail(payload);
+    input.value = '';
+  }, 'Sending...');
 }

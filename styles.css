@@ -727,6 +727,7 @@ body {
 
 .conversation-dates {
     display: flex;
+    flex-direction: column;
     justify-content: space-between;
     font-size: 0.75rem;
     color: #888;
@@ -1202,3 +1203,63 @@ select#shipping-status-filter {padding:10px 14px;border:1px solid #b8dacf;border
 .mini-stat {background:#f4f7f6;border:1px solid #d6e3de;padding:8px 12px;border-radius:8px;display:flex;flex-direction:column;min-width:90px;}
 .mini-stat-label {font-size:11px;color:#567;}
 .mini-stat-value {font-size:16px;}
+
+/* Loader Animations */
+.loader-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  border-radius: inherit;
+}
+
+.loader-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e2e8e5;
+  border-top: 2px solid #195744;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.button-loader {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 8px;
+}
+
+.section-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #666;
+  gap: 12px;
+}
+
+.section-loader .loader-spinner {
+  width: 32px;
+  height: 32px;
+  border-width: 3px;
+}
+
+.loading-text {
+  font-size: 14px;
+  color: #888;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

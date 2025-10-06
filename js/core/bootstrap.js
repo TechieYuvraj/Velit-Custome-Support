@@ -3,12 +3,13 @@ import { attachConversationListHandlers } from '../components/conversationDetail
 import { state, setState } from './state.js';
 import { loadOrders, attachOrderHistoryHandlers } from '../views/orderHistoryView.js';
 import { initShippingRequestsView } from '../views/shippingRequestsView.js';
+import { showLoader, hideLoader, withSectionLoader, withButtonLoader } from '../utils/loader.js';
 
 function isoRange(fromDate, toDate){
   return [fromDate + 'T00:00:00Z', toDate + 'T23:59:59Z'];
 }
 
-function switchView(view){
+async function switchView(view){
   const views=['order-history','shipping-requests','customer-support'];
   views.forEach(v=>{
     const section=document.getElementById(`view-${v}`);
@@ -17,8 +18,24 @@ function switchView(view){
     if(btn){ if(v===view) btn.classList.add('active'); else btn.classList.remove('active'); }
   });
   setState({ currentView: view });
-  if(view==='order-history'){ if(!state.orders.length) loadOrders(); }
-  if(view==='shipping-requests'){ initShippingRequestsView(); }
+  
+  const currentSection = document.getElementById(`view-${view}`);
+  
+  if(view==='order-history'){ 
+    if(!state.orders.length) {
+      await withSectionLoader(currentSection, async () => {
+        await loadOrders();
+      }, 'Loading order history...');
+    }
+  }
+  if(view==='shipping-requests'){ 
+    await withSectionLoader(currentSection, async () => {
+      await initShippingRequestsView();
+    }, 'Loading shipping requests...');
+  }
+  if(view==='customer-support'){
+    // Customer support is already loaded, no need to reload
+  }
 }
 
 async function initCustomerSupport(){
@@ -29,7 +46,7 @@ async function initCustomerSupport(){
 function bindNav(){
   ['order-history','shipping-requests','customer-support'].forEach(v=>{
     const btn=document.getElementById(`nav-${v}`);
-    if(btn) btn.addEventListener('click', ()=> switchView(v));
+    if(btn) btn.addEventListener('click', async ()=> await switchView(v));
   });
 }
 
@@ -63,7 +80,11 @@ function bindCustomerSupportSubNav(){
 function bindFilters(){
   const filterBtn = document.getElementById('filter-conversations-btn');
   if(filterBtn){
-    filterBtn.addEventListener('click', ()=> initCustomerSupport());
+    filterBtn.addEventListener('click', async ()=> {
+      await withButtonLoader(filterBtn, async () => {
+        await initCustomerSupport();
+      }, 'Filtering...');
+    });
   }
 }
 
@@ -73,8 +94,29 @@ export async function initApp(){
   attachOrderHistoryHandlers();
   bindCustomerSupportSubNav();
   bindFilters();
-  await initCustomerSupport();
-  switchView('customer-support');
+  
+  // Show initial loading for the whole app
+  const appContainer = document.querySelector('.dashboard-container');
+  if (appContainer) {
+    showLoader(appContainer, 'overlay');
+  }
+  
+  try {
+    // Load all data in parallel
+    await Promise.all([
+      initCustomerSupport(),
+      loadOrders(),
+      initShippingRequestsView()
+    ]);
+  } catch (error) {
+    console.error('Failed to load initial data:', error);
+  } finally {
+    if (appContainer) {
+      hideLoader(appContainer, 'overlay');
+    }
+  }
+  
+  await switchView('customer-support');
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{ initApp(); });

@@ -1,6 +1,7 @@
 import { state, setState } from '../core/state.js';
 import { api } from '../core/api.js';
 import { formatDate, extractNameFromEmail } from '../utils/format.js';
+import { showLoader, hideLoader } from '../utils/loader.js';
 
 const DEFAULT_FROM = '2024-01-01T00:00:00Z';
 const DEFAULT_TO = '2025-09-16T23:59:59Z';
@@ -132,15 +133,15 @@ function setStat(id, val){ const el=document.getElementById(id); if(el) el.textC
 function showLoading(){
   const email = document.getElementById('email-conversations');
   const crm = document.getElementById('crm-conversations');
-  if(email) email.innerHTML = '<div class="loading">Loading...</div>';
-  if(crm) crm.innerHTML = '<div class="loading">Loading...</div>';
+  if(email) showLoader(email, 'section', 'Loading conversations...');
+  if(crm) showLoader(crm, 'section', 'Loading conversations...');
 }
 
 function showError(){
   const email = document.getElementById('email-conversations');
   const crm = document.getElementById('crm-conversations');
-  if(email) email.innerHTML = '<div class="error">Failed to load conversations</div>';
-  if(crm) crm.innerHTML = '<div class="error">Failed to load conversations</div>';
+  if(email) email.innerHTML = '<div class="section-loader"><div style="color:#e74c3c;">❌ Failed to load conversations</div></div>';
+  if(crm) crm.innerHTML = '<div class="section-loader"><div style="color:#e74c3c;">❌ Failed to load conversations</div></div>';
 }
 
 function escapeHtml(str){
