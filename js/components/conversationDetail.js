@@ -108,15 +108,22 @@ function renderCrmDetail(host, conversation){
 
 function renderMessages(messages){
   if(!messages || !messages.length) return '<p style="text-align:center;color:#888;padding:20px;">No messages in this conversation</p>';
-  return messages.map(msg=>{
-    // Handle new Firestore document structure with decodedMessage
-    const m = msg.fields ? {
-      sender: msg.fields.sender?.stringValue,
-      message: msg.decodedMessage || msg.fields.message?.stringValue,
-      image_link: msg.fields.image_link?.stringValue,
-      imagelink: msg.fields.imagelink?.stringValue,
-      timestamp: msg.fields.timestamp?.timestampValue || msg.fields.timestamp?.stringValue,
-    }: msg;
+  
+  // Sort messages by timestamp to ensure chronological order
+  const sortedMessages = [...messages].sort((a, b) => {
+    const timeA = new Date(a.timestamp?.timestampValue || a.timestamp?.stringValue || a.timestamp || 0);
+    const timeB = new Date(b.timestamp?.timestampValue || b.timestamp?.stringValue || b.timestamp || 0);
+    return timeA - timeB;
+  });
+  
+  return sortedMessages.map(msg=>{
+    // Handle new flat Firestore structure
+    const m = {
+      sender: msg.sender?.stringValue || msg.sender,
+      message: msg.decodedMessage || msg.message?.stringValue || msg.message,
+      image_link: msg.image_link?.stringValue || msg.image_link,
+      timestamp: msg.timestamp?.timestampValue || msg.timestamp?.stringValue || msg.timestamp,
+    };
     
     // User messages on the left, admin/support messages on the right
     const isUser = m.sender === 'user' || m.sender === 'customer';
@@ -124,9 +131,9 @@ function renderMessages(messages){
     const bubbleClass = isUser ? 'message-bubble-user' : 'message-bubble-admin';
     
     // Use decodedMessage if available, fallback to encoded message
-    const textContent = m.message || m.content || 'No content';
+    const textContent = m.message || 'No content';
     
-    let imageUrl = m.image_link || m.imagelink || '';
+    let imageUrl = m.image_link || '';
     if(imageUrl && imageUrl.includes('drive.google.com/file/d/')){
       const match = imageUrl.match(/\/d\/([a-zA-Z0-9_-]+)\//); 
       if(match && match[1]) imageUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
