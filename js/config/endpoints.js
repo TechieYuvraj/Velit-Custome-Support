@@ -1,7 +1,7 @@
 // Central API endpoint definitions and constants
-export const BASE_URL = 'http://localhost:5678/webhook';  // Local dev
+// export const BASE_URL = 'http://localhost:5678/webhook';  // Local dev
 // export const BASE_URL = 'https://staging.app.n8n.cloud/webhook';  // Staging
-// export const BASE_URL = 'https://internsss.app.n8n.cloud/webhook';  // Production
+export const BASE_URL = 'https://primary-production-4a6d8.up.railway.app/webhook';  // Production
 
 export const ENDPOINTS = {
   conversations: `${BASE_URL}/fetchFromDB`,
