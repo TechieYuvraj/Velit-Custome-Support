@@ -38,9 +38,12 @@ async function selectConversation(id, type){
 async function fetchConversationMessages(conversationId) {
   try {
     const response = await api.fetchMessages(conversationId);
-    if (response && response.data && response.data.length) {
-      // Normalize Firestore documents if needed
-      return response.data.map(doc => doc.fields ? doc : { fields: doc });
+    if (response && Array.isArray(response)) {
+      // Handle direct array response from fetchMessages webhook
+      return response;
+    } else if (response && response.data && response.data.length) {
+      // Handle wrapped response
+      return response.data;
     }
     return [];
   } catch (err) {
@@ -106,23 +109,35 @@ function renderCrmDetail(host, conversation){
 function renderMessages(messages){
   if(!messages || !messages.length) return '<p style="text-align:center;color:#888;padding:20px;">No messages in this conversation</p>';
   return messages.map(msg=>{
+    // Handle new Firestore document structure with decodedMessage
     const m = msg.fields ? {
       sender: msg.fields.sender?.stringValue,
-      message: msg.fields.message?.stringValue,
+      message: msg.decodedMessage || msg.fields.message?.stringValue,
       image_link: msg.fields.image_link?.stringValue,
       imagelink: msg.fields.imagelink?.stringValue,
       timestamp: msg.fields.timestamp?.timestampValue || msg.fields.timestamp?.stringValue,
     }: msg;
-    const isUser = m.sender==='user' || m.sender==='customer';
-    const alignClass = isUser? 'message-left':'message-right';
-    const bubbleClass = isUser? 'message-bubble-user':'message-bubble-admin';
+    
+    // User messages on the left, admin/support messages on the right
+    const isUser = m.sender === 'user' || m.sender === 'customer';
+    const alignClass = isUser ? 'message-left' : 'message-right';
+    const bubbleClass = isUser ? 'message-bubble-user' : 'message-bubble-admin';
+    
+    // Use decodedMessage if available, fallback to encoded message
     const textContent = m.message || m.content || 'No content';
+    
     let imageUrl = m.image_link || m.imagelink || '';
-    if(imageUrl.includes('drive.google.com/file/d/')){
-      const match = imageUrl.match(/\/d\/([a-zA-Z0-9_-]+)\//); if(match && match[1]) imageUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+    if(imageUrl && imageUrl.includes('drive.google.com/file/d/')){
+      const match = imageUrl.match(/\/d\/([a-zA-Z0-9_-]+)\//); 
+      if(match && match[1]) imageUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
     }
-    const imageContent = imageUrl? `<div class="message-image"><img src="${imageUrl}" alt="attachment" style="max-width:220px;max-height:160px;border-radius:8px;margin-top:8px;" onerror="this.onerror=null;this.src='https://via.placeholder.com/220x160.png?text=Image+not+found';" /></div>`:'';
-    return `<div class="message-row ${alignClass}"><div class="${bubbleClass}"><div>${textContent}</div>${imageContent}<span class="message-time">${formatDate(m.timestamp)}</span></div></div>`;
+    
+    const imageContent = imageUrl ? `<div class="message-image"><img src="${imageUrl}" alt="attachment" style="max-width:220px;max-height:160px;border-radius:8px;margin-top:8px;" onerror="this.onerror=null;this.src='https://via.placeholder.com/220x160.png?text=Image+not+found';" /></div>` : '';
+    
+    // Format message text with line breaks
+    const formattedText = textContent.replace(/\n/g, '<br>');
+    
+    return `<div class="message-row ${alignClass}"><div class="${bubbleClass}"><div>${formattedText}</div>${imageContent}<span class="message-time">${formatDate(m.timestamp)}</span></div></div>`;
   }).join('');
 }
 
