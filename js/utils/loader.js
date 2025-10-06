@@ -68,7 +68,7 @@ export function hideLoader(element, type = 'overlay') {
     case 'section':
       const sectionLoader = element.querySelector('.section-loader');
       if (sectionLoader) {
-        element.innerHTML = '';
+        sectionLoader.remove();
       }
       break;
       

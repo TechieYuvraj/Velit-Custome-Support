@@ -3,7 +3,7 @@ import { attachConversationListHandlers } from '../components/conversationDetail
 import { state, setState } from './state.js';
 import { loadOrders, attachOrderHistoryHandlers } from '../views/orderHistoryView.js';
 import { initShippingRequestsView } from '../views/shippingRequestsView.js';
-import { showLoader, hideLoader, withSectionLoader, withButtonLoader } from '../utils/loader.js';
+import { showLoader, hideLoader, withButtonLoader } from '../utils/loader.js';
 
 function isoRange(fromDate, toDate){
   return [fromDate + 'T00:00:00Z', toDate + 'T23:59:59Z'];
@@ -23,15 +23,21 @@ async function switchView(view){
   
   if(view==='order-history'){ 
     if(!state.orders.length) {
-      await withSectionLoader(currentSection, async () => {
+      showLoader(currentSection, 'overlay');
+      try {
         await loadOrders();
-      }, 'Loading order history...');
+      } finally {
+        hideLoader(currentSection, 'overlay');
+      }
     }
   }
   if(view==='shipping-requests'){ 
-    await withSectionLoader(currentSection, async () => {
+    showLoader(currentSection, 'overlay');
+    try {
       await initShippingRequestsView();
-    }, 'Loading shipping requests...');
+    } finally {
+      hideLoader(currentSection, 'overlay');
+    }
   }
   if(view==='customer-support'){
     // Customer support is already loaded, no need to reload
@@ -105,8 +111,8 @@ export async function initApp(){
     // Load all data in parallel
     await Promise.all([
       initCustomerSupport(),
-      loadOrders(),
-      initShippingRequestsView()
+      loadOrders()
+      // Note: Don't load shipping requests at startup since view is hidden
     ]);
   } catch (error) {
     console.error('Failed to load initial data:', error);

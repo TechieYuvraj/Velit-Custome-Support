@@ -15,13 +15,50 @@ function ensureSubscribed(){
 }
 
 export async function loadShippingRequests(){
-  if(initialized) return; // fetch only once for now
+  if(initialized) {
+    console.log('Shipping requests already initialized, skipping fetch');
+    return; // fetch only once for now
+  }
   try {
     const sessionId = buildSessionId();
     const data = await api.fetchShippingRequests(sessionId, 'ShippingRequests');
+    console.log('Shipping requests raw API response:', data);
     const array = Array.isArray(data) ? data : (data ? [data] : []);
     const list = array.map(normalizeRequest).filter(Boolean);
+    console.log('Final shipping requests list:', list);
     setState({ shippingRequests: list });
+    
+    // If no data, set some mock data for testing
+    if (!list.length) {
+      console.log('No shipping requests from API, setting mock data for testing');
+      const mockData = [
+        {
+          id: 'SR-001',
+          product: 'Rooftop AC Unit',
+          status: 'pending',
+          trackingNumber: 'TRK123456',
+          requestId: 'REQ-001',
+          orderId: 'ORD-12345',
+          url: '',
+          email: 'customer@example.com',
+          name: 'John Doe',
+          createdAt: Date.now() - 86400000 // 1 day ago
+        },
+        {
+          id: 'SR-002',
+          product: 'Gas Heater',
+          status: 'in_transit',
+          trackingNumber: 'TRK789012',
+          requestId: 'REQ-002',
+          orderId: 'ORD-67890',
+          url: '',
+          email: 'jane@example.com',
+          name: 'Jane Smith',
+          createdAt: Date.now() - 43200000 // 12 hours ago
+        }
+      ];
+      setState({ shippingRequests: mockData });
+    }
   } catch(err){
     console.error('Failed to load shipping requests', err);
   } finally {
@@ -79,8 +116,10 @@ export function attachShippingRequestsHandlers(){
 
 export function renderShippingRequests(){
   const host = document.getElementById('shipping-request-cards');
+  console.log('renderShippingRequests called, host element:', host);
   if(!host) return;
   const list = filtered();
+  console.log('Filtered shipping requests for rendering:', list);
   if(!list.length){ host.innerHTML = '<p class="empty">No shipping requests found.</p>'; return; }
   host.innerHTML = list.map(cardHtml).join('');
 }
@@ -138,6 +177,7 @@ function labelize(s){
 
 // Public bootstrap for view
 export async function initShippingRequestsView(){
+  console.log('initShippingRequestsView called');
   ensureSubscribed();
   await loadShippingRequests();
   attachShippingRequestsHandlers();
