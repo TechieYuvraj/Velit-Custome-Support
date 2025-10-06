@@ -24,17 +24,15 @@ async function selectConversation(id, type){
     showLoader(detailContainer, 'section', 'Loading conversation...');
   }
   
-  // If conversation doesn't have messages, fetch them
-  if (!conv.messages || conv.messages.length === 0) {
-    try {
-      // Use conversation_id for message fetching
-      const conversationId = conv.conversation_id || conv.session_id || id;
-      const messages = await fetchConversationMessages(conversationId);
-      conv.messages = messages;
-    } catch (err) {
-      console.warn('Failed to fetch messages for conversation:', id, err);
-      conv.messages = [];
-    }
+  // Always fetch fresh messages from webhook
+  try {
+    // Use conversation_id for message fetching
+    const conversationId = conv.conversation_id || conv.session_id || id;
+    const messages = await fetchConversationMessages(conversationId);
+    conv.messages = messages;
+  } catch (err) {
+    console.warn('Failed to fetch messages for conversation:', id, err);
+    conv.messages = [];
   }
   
   setState({ selectedConversation: conv });
