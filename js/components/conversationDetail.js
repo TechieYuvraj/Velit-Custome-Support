@@ -79,7 +79,7 @@ function renderEmailDetail(host, conversation){
       </div>
     </div>
     <div class="messages-scroll-wrapper" style="position:relative;display:flex;flex-direction:column;gap:12px;padding-top:8px;">
-      <div class="messages-container" style="max-height:100vh;overflow-y:auto;padding-right:4px;">${renderMessages(conversation.messages||[])}</div>
+      <div class="messages-container">${renderMessages(conversation.messages||[])}</div>
     </div>
     <div class="email-reply-box" style="position:sticky;margin-top:5px;display:flex;gap:8px;">
       <input id="email-reply-input" type="text" placeholder="Type your reply..." style="flex:1;padding:10px 12px;border-radius:6px;border:2px solid #cbd5d1;font-size:13px;" />
