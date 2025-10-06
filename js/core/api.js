@@ -16,6 +16,7 @@ async function request(url, { method = 'POST', body = {}, headers = {} } = {}) {
 
 export const api = {
   fetchConversations: (from_date, to_date) => request(ENDPOINTS.conversations, { body: { business_id: BUSINESS_ID, from_date, to_date } }),
+  fetchMessages: (conversationId) => request(`${ENDPOINTS.messages}?businessid=${BUSINESS_ID}&conversation_id=${conversationId}`, { method: 'GET' }),
   fetchOrdersByEmail: (email) => request(ENDPOINTS.ordersByEmail, { body: { email } }),
   createShippingLabel: (payload) => request(ENDPOINTS.shippingLabel, { body: payload }),
   fetchLabelHistory: (email) => request(ENDPOINTS.labelHistory, { body: email ? { email } : {} }),

@@ -12,12 +12,41 @@ export function attachConversationListHandlers(){
   });
 }
 
-function selectConversation(id, type){
+async function selectConversation(id, type){
   const list = type==='crm'? state.crmConversations : state.emailConversations;
   const conv = list.find(c=>c.conversation_id===id);
   if(!conv) return;
+  
+  // If conversation doesn't have messages, fetch them
+  if (!conv.messages || conv.messages.length === 0) {
+    try {
+      // Use conversation_id for message fetching
+      const conversationId = conv.conversation_id || conv.session_id || id;
+      const messages = await fetchConversationMessages(conversationId);
+      conv.messages = messages;
+    } catch (err) {
+      console.warn('Failed to fetch messages for conversation:', id, err);
+      conv.messages = [];
+    }
+  }
+  
   setState({ selectedConversation: conv });
   renderConversationDetail(conv, type);
+}
+
+// Fetch messages for a specific conversation
+async function fetchConversationMessages(conversationId) {
+  try {
+    const response = await api.fetchMessages(conversationId);
+    if (response && response.data && response.data.length) {
+      // Normalize Firestore documents if needed
+      return response.data.map(doc => doc.fields ? doc : { fields: doc });
+    }
+    return [];
+  } catch (err) {
+    console.warn('Failed to fetch messages:', err);
+    return [];
+  }
 }
 
 function renderConversationDetail(conversation, type){

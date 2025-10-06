@@ -5,6 +5,7 @@ export const BASE_URL = 'https://primary-production-4a6d8.up.railway.app/webhook
 
 export const ENDPOINTS = {
   conversations: `${BASE_URL}/fetchfromDB`,
+  messages: `${BASE_URL}/fetchMessages`,
   ordersByEmail: `${BASE_URL}/FetchOrderByEmail`,
   shippingLabel: `${BASE_URL}/ShippingLabel`,
   labelHistory: `${BASE_URL}/LabelHistory`,
