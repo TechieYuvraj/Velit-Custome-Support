@@ -59,7 +59,7 @@
     padding: 8px 18px;
     font-size: 1rem;
     cursor: pointer;
-    margin-top: 8px;
+    justify-content: center;
 }
 
 #shipping-label-modal #close-shipping-label-modal {
