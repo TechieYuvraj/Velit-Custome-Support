@@ -23,5 +23,6 @@ export const api = {
   updateStatus: (session_id, status, from_email) => request(ENDPOINTS.updateStatus, { method: 'PATCH', body: { session_id, status, business_id: BUSINESS_ID, from_email } }),
   sendEmail: (payload) => request(ENDPOINTS.sendEmail, { body: payload }),
   fetchOrderHistory: (sessionId, chatInput='Order History') => request(ENDPOINTS.orderHistory, { body: { chatInput, sessionId } }),
-  fetchShippingRequests: (sessionId, chatInput='ShippingRequests') => request(ENDPOINTS.labelHistory, { body: { chatInput, sessionId } })
+  fetchShippingRequests: (sessionId, chatInput='ShippingRequests') => request(ENDPOINTS.labelHistory, { body: { chatInput, sessionId } }),
+  updateShipmentStatus: (payload) => request(ENDPOINTS.shipmentStatus, { body: payload })
 };

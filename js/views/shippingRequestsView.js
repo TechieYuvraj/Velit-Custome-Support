@@ -138,6 +138,7 @@ function cardHtml(r){
     </div>
     <div class="sr-actions" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
       ${r.url ? `<button class="mini-btn" onclick="window.open('${r.url}','_blank')">Label</button>`:''}
+      <button class="mini-btn update-status-btn" data-request-id="${r.id}" onclick="openUpdateStatusModal('${r.id}')">Update Shipment Status</button>
     </div>
     <div class="sr-footer"><small>${formatDate(r.createdAt)}</small></div>
   </div>`;
@@ -184,4 +185,116 @@ export async function initShippingRequestsView(){
   attachShippingRequestsHandlers();
   renderShippingStats();
   renderShippingRequests();
+  initUpdateStatusModal();
 }
+
+// Initialize the update status modal
+function initUpdateStatusModal() {
+  // Create modal HTML if it doesn't exist
+  if (!document.getElementById('update-status-modal')) {
+    const modalHTML = `
+      <div id="update-status-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Update Shipment Status</h3>
+            <button class="modal-close" onclick="closeUpdateStatusModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="status-select">Status:</label>
+              <select id="status-select" class="form-control">
+                <option value="pending">Pending</option>
+                <option value="in_transit">In Transit</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="status-note">Note:</label>
+              <textarea id="status-note" class="form-control" placeholder="Enter any additional notes..." rows="3"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeUpdateStatusModal()">Cancel</button>
+            <button class="btn-primary" onclick="updateShipmentStatus()">Update Status</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+  }
+}
+
+// Global functions for modal interaction
+window.openUpdateStatusModal = function(requestId) {
+  const modal = document.getElementById('update-status-modal');
+  const request = state.shippingRequests.find(r => r.id === requestId);
+  
+  if (modal && request) {
+    // Set current values
+    document.getElementById('status-select').value = request.status || 'pending';
+    document.getElementById('status-note').value = '';
+    
+    // Store request ID for update
+    modal.dataset.requestId = requestId;
+    modal.style.display = 'flex';
+  }
+};
+
+window.closeUpdateStatusModal = function() {
+  const modal = document.getElementById('update-status-modal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.dataset.requestId = '';
+  }
+};
+
+window.updateShipmentStatus = async function() {
+  const modal = document.getElementById('update-status-modal');
+  const requestId = modal.dataset.requestId;
+  const newStatus = document.getElementById('status-select').value;
+  const note = document.getElementById('status-note').value;
+  
+  if (!requestId) return;
+  
+  try {
+    // Disable buttons to prevent duplicate submits
+    const footer = modal.querySelector('.modal-footer');
+    const buttons = footer ? Array.from(footer.querySelectorAll('button')) : [];
+    buttons.forEach(b => b.disabled = true);
+
+    // Collect request context to send along
+    const req = state.shippingRequests.find(r => r.id === requestId) || {};
+    const payload = {
+      requestId: req.requestId || requestId,
+      orderId: req.orderId || '',
+      trackingNumber: req.trackingNumber || '',
+      email: req.email || '',
+      name: req.name || '',
+      product: req.product || '',
+      status: newStatus,
+      note: note || '',
+    };
+
+    // Send to webhook
+    await api.updateShipmentStatus(payload);
+
+    // Update the status in local state
+    const requestIndex = state.shippingRequests.findIndex(r => r.id === requestId);
+    if (requestIndex !== -1) {
+      state.shippingRequests[requestIndex].status = newStatus;
+      setState({ shippingRequests: [...state.shippingRequests] });
+    }
+    
+    closeUpdateStatusModal();
+    renderShippingRequests();
+    renderShippingStats();
+  } catch (error) {
+    console.error('Failed to update shipment status:', error);
+    alert('Failed to update status. Please try again.');
+  } finally {
+    const footer = modal.querySelector('.modal-footer');
+    const buttons = footer ? Array.from(footer.querySelectorAll('button')) : [];
+    buttons.forEach(b => b.disabled = false);
+  }
+};
