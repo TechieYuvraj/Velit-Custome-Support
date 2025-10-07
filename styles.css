@@ -63,17 +63,23 @@
 }
 
 #shipping-label-modal #close-shipping-label-modal {
-    position: absolute;
-    top: 12px;
-    right: 18px;
-    font-size: 22px;
-    background: none;
-    border: none;
-    color: #888;
+    font-size: 30px;
+    color: #195744;
     cursor: pointer;
-    z-index: 2;
-    transition: color 0.2s;
+    height: 35px;
+    width: 35px;
+    border: 1px solid;
+    border-radius: 50%;
 }
+
+#modal-right-top-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    border-bottom-style: ridge;
+}
+
 #shipping-label-modal #close-shipping-label-modal:hover {
     color: #195744;
 }

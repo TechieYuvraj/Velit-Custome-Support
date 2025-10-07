@@ -20,7 +20,9 @@ export async function openShippingLabelModal(email, orders = []){
       <div style="display:flex;flex:1;min-height:0;">
         <!-- Left column: order + selects -->
         <div style="flex:1;padding:20px 18px 12px 22px;border-right:1px solid #eee;overflow-y:auto;">
+          <div id="modal-right-top-section">
           <h3 style="margin:0 0 14px;font-size:16px;font-weight:600;">Shipping Request</h3>
+          </div>
           <form id="modal-shipping-label-form" style="display:flex;flex-direction:column;height:100%;">
             <div id="modal-order-no-group" class="form-group"></div>
             <div class="form-group" id="modal-from-address-group"></div>
@@ -30,7 +32,10 @@ export async function openShippingLabelModal(email, orders = []){
         </div>
         <!-- Right column: name + address fields -->
         <div style="flex:1;padding:20px 24px 12px 24px;overflow-y:auto;">
+          <div id="modal-right-top-section">
           <h3 style="margin:0 0 14px;font-size:16px;font-weight:600;">Recipient Details</h3>
+          <button id="close-shipping-label-modal" aria-label="Close">&times;</button>
+          </div>
           <div id="modal-dynamic-address"></div>
           <div id="modal-shipping-label-response" style="margin-top:10px;font-size:13px;"></div>
         </div>
@@ -38,7 +43,6 @@ export async function openShippingLabelModal(email, orders = []){
       <div style="padding:12px 0 18px;display:flex;justify-content:center;border-top:1px solid #eee;background:#fafafa;">
   <button type="submit" form="modal-shipping-label-form" class="primary-action" style="min-width:220px;">Create</button>
       </div>
-      <button id="close-shipping-label-modal" aria-label="Close" style="position:absolute;top:8px;right:10px;font-size:22px;background:none;border:none;cursor:pointer;color:#444;">&times;</button>
     </div>`;
 
   modal.querySelector('#close-shipping-label-modal').onclick=()=>{ modal.style.display='none'; };

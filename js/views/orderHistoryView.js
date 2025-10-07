@@ -134,6 +134,6 @@ function orderCard(o){
       <div><strong>${o.name || '—'}</strong><br><span class="email">${o.email || '—'}</span>${o.phone? `<br><span class="phone">${o.phone}</span>`:''}</div>
     </div>
     <div class="order-address">${addr}</div>
-    <div class="order-actions"><button class="mini-btn">Create Shipping Label</button></div>
+    <div class="order-actions"><button class="mini-btn">Create Shipping Request</button></div>
   </div>`;
 }
