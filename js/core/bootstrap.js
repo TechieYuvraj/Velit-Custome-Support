@@ -4,13 +4,14 @@ import { state, setState } from './state.js';
 import { loadOrders, attachOrderHistoryHandlers } from '../views/orderHistoryView.js';
 import { initShippingRequestsView } from '../views/shippingRequestsView.js';
 import { showLoader, hideLoader, withButtonLoader } from '../utils/loader.js';
+import { initTicketsView } from '../views/ticketsView.js';
 
 function isoRange(fromDate, toDate){
   return [fromDate + 'T00:00:00Z', toDate + 'T23:59:59Z'];
 }
 
 async function switchView(view){
-  const views=['order-history','shipping-requests','customer-support'];
+  const views=['order-history','shipping-requests','customer-support','tickets'];
   views.forEach(v=>{
     const section=document.getElementById(`view-${v}`);
     if(section) section.hidden = v!==view;
@@ -42,6 +43,10 @@ async function switchView(view){
   if(view==='customer-support'){
     // Customer support is already loaded, no need to reload
   }
+  if(view==='tickets'){
+    showLoader(currentSection, 'overlay');
+    try { await initTicketsView(); } finally { hideLoader(currentSection, 'overlay'); }
+  }
 }
 
 async function initCustomerSupport(){
@@ -50,7 +55,7 @@ async function initCustomerSupport(){
 }
 
 function bindNav(){
-  ['order-history','shipping-requests','customer-support'].forEach(v=>{
+  ['order-history','shipping-requests','customer-support','tickets'].forEach(v=>{
     const btn=document.getElementById(`nav-${v}`);
     if(btn) btn.addEventListener('click', async ()=> await switchView(v));
   });

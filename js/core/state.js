@@ -6,6 +6,8 @@ export const state = {
   orders: [],
   ordersSource: 'unknown', // 'live' | 'mock' | 'unknown'
   shippingRequests: [],
+  tickets: [],
+  selectedTicket: null,
   selectedConversation: null,
   currentView: 'customer-support', // 'order-history' | 'shipping-requests' | 'customer-support'
   loaders: {},

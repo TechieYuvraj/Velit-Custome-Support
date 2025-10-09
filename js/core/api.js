@@ -24,5 +24,7 @@ export const api = {
   sendEmail: (payload) => request(ENDPOINTS.sendEmail, { body: payload }),
   fetchOrderHistory: (sessionId, chatInput='Order History') => request(ENDPOINTS.orderHistory, { body: { chatInput, sessionId } }),
   fetchShippingRequests: (sessionId, chatInput='ShippingRequests') => request(ENDPOINTS.labelHistory, { body: { chatInput, sessionId } }),
-  updateShipmentStatus: (payload) => request(ENDPOINTS.shipmentStatus, { body: payload })
+  updateShipmentStatus: (payload) => request(ENDPOINTS.shipmentStatus, { body: payload }),
+  fetchTickets: () => request(ENDPOINTS.ticketsFetch, { body: { chatInput: 'FetchTickets' } }),
+  createTicket: (payload) => request(ENDPOINTS.ticketsCreate, { body: payload })
 };

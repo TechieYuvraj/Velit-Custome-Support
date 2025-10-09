@@ -12,7 +12,9 @@ export const ENDPOINTS = {
   updateStatus: `${BASE_URL}/UpdateStatus`,
   sendEmail: `${BASE_URL}/sendEmail`,
   orderHistory: `${BASE_URL}/FetchOrderHistory`,
-  shipmentStatus: `${BASE_URL}/ShipmentStatus`
+  shipmentStatus: `${BASE_URL}/ShipmentStatus`,
+  ticketsFetch: `${BASE_URL}/fetchTickets`,
+  ticketsCreate: `${BASE_URL}/fetchTickets`
 };
 
 export const BUSINESS_ID = 'velit-camping-2027';

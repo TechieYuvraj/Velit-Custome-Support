@@ -31,10 +31,31 @@
             <button class="nav-btn" data-view="order-history" id="nav-order-history">Order History</button>
             <button class="nav-btn" data-view="shipping-requests" id="nav-shipping-requests">Shipping Requests</button>
             <button class="nav-btn active" data-view="customer-support" id="nav-customer-support">Customer Support</button>
+            <button class="nav-btn" data-view="tickets" id="nav-tickets">Tickets</button>
         </nav>
 
         <!-- View Containers -->
         <main class="views-root">
+            <!-- Tickets View -->
+            <section id="view-tickets" class="app-view" hidden>
+                <div class="view-header">
+                    <h2>Tickets</h2>
+                    <div class="tickets-controls" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+                        <div class="tickets-stats" id="tickets-stats" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+                        <div style="flex:1"></div>
+                        <button id="create-ticket" class="primary-action">Create Ticket</button>
+                    </div>
+                </div>
+                <div class="conversations-container">
+                    <div class="conversations-list" id="tickets-list"></div>
+                    <div class="conversation-detail" id="ticket-detail">
+                        <div class="detail-placeholder">
+                            <i class="fas fa-ticket"></i>
+                            <p>Select a ticket to view details</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
             <!-- Order History View (placeholder) -->
             <section id="view-order-history" class="app-view" hidden>
                 <div class="view-header">
