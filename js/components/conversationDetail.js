@@ -2,6 +2,7 @@ import { api } from '../core/api.js';
 import { state, setState } from '../core/state.js';
 import { formatDate, extractNameFromEmail } from '../utils/format.js';
 import { showLoader, hideLoader, withButtonLoader } from '../utils/loader.js';
+import { BUSINESS_ID } from '../config/endpoints.js';
 
 export function attachConversationListHandlers(){
   document.addEventListener('click',(e)=>{
@@ -24,14 +25,19 @@ async function selectConversation(id, type){
     showLoader(detailContainer, 'section', 'Loading conversation...');
   }
   
-  // Always fetch fresh messages from webhook
+  // Static-per-reload: try cache first; if missing, fetch then cache
   try {
-    // Use conversation_id for message fetching
     const conversationId = conv.conversation_id || conv.session_id || id;
-    const messages = await fetchConversationMessages(conversationId);
-    conv.messages = messages;
+    const cached = getCachedMessages(conversationId);
+    if (cached && cached.length) {
+      conv.messages = cached;
+    } else {
+      const messages = await fetchConversationMessages(conversationId);
+      conv.messages = messages;
+      setCachedMessages(conversationId, messages);
+    }
   } catch (err) {
-    console.warn('Failed to fetch messages for conversation:', id, err);
+    console.warn('Failed to load messages for conversation:', id, err);
     conv.messages = [];
   }
   
@@ -168,14 +174,42 @@ async function sendEmailReply(conversation){
   await withButtonLoader(sendButton, async () => {
     const lastMsg = (conversation.messages && conversation.messages.length) ? conversation.messages[conversation.messages.length-1] : {};
     const payload = { 
+      business_id: BUSINESS_ID,
       "to-email": conversation.email || conversation.sender_email || '', 
       message_id: lastMsg.message_id || '', 
       thread_id: conversation.conversation_id || '', 
       "from-email": conversation.agent_email || 'support@velit.com', 
       subject: conversation.subject || '', 
-      content 
+      content,
+      context: {
+        conversation_id: conversation.conversation_id || '',
+        session_id: conversation.session_id || '',
+        status: conversation.status || '',
+        customer_email: conversation.email || conversation.sender_email || '',
+        customer_name: conversation.name || extractNameFromEmail(conversation.email || '')
+      }
     };
     await api.sendEmail(payload);
     input.value = '';
+    // Append reply locally and cache so it persists until reload
+    const reply = {
+      sender: 'admin',
+      decodedMessage: content,
+      timestamp: new Date().toISOString()
+    };
+    conversation.messages = [...(conversation.messages||[]), reply];
+    setCachedMessages(conversation.conversation_id || conversation.session_id || '', conversation.messages);
+    // Re-render detail to show the new message
+    const host = document.getElementById('email-detail');
+    if (host) renderEmailDetail(host, conversation);
   }, 'Sending...');
+}
+
+// LocalStorage cache helpers
+function storageKeyFor(convId){ return `cs_messages_${convId}`; }
+function getCachedMessages(convId){
+  try { const raw = localStorage.getItem(storageKeyFor(convId)); return raw ? JSON.parse(raw) : null; } catch { return null; }
+}
+function setCachedMessages(convId, messages){
+  try { localStorage.setItem(storageKeyFor(convId), JSON.stringify(messages||[])); } catch {}
 }

@@ -105,28 +105,15 @@ export async function initApp(){
   attachOrderHistoryHandlers();
   bindCustomerSupportSubNav();
   bindFilters();
-  
-  // Show initial loading for the whole app
-  const appContainer = document.querySelector('.dashboard-container');
-  if (appContainer) {
-    showLoader(appContainer, 'overlay');
-  }
-  
-  try {
-    // Load all data in parallel
-    await Promise.all([
-      initCustomerSupport(),
-      loadOrders()
-      // Note: Don't load shipping requests at startup since view is hidden
-    ]);
-  } catch (error) {
-    console.error('Failed to load initial data:', error);
-  } finally {
-    if (appContainer) {
-      hideLoader(appContainer, 'overlay');
-    }
-  }
-  
+
+  // Fire all initial data loads without blocking UI so tab switching remains responsive
+  // Start fetches for all four tabs in the background
+  (async ()=>{ try { await initCustomerSupport(); } catch(e){ console.error('Customer support init failed', e);} })();
+  (async ()=>{ try { await loadOrders(); } catch(e){ console.error('Orders load failed', e);} })();
+  (async ()=>{ try { await initShippingRequestsView(); } catch(e){ console.error('Shipping requests init failed', e);} })();
+  (async ()=>{ try { const mod = await import('../views/ticketsView.js'); await mod.initTicketsView(); } catch(e){ console.error('Tickets init failed', e);} })();
+
+  // Immediately show customer support view; user can navigate while data loads
   await switchView('customer-support');
 }
 

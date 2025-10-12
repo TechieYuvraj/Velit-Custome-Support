@@ -23,7 +23,7 @@ export async function openShippingLabelModal(email, orders = []){
           <div id="modal-right-top-section">
           <h3 style="margin:0 0 14px;font-size:16px;font-weight:600;">Shipping Request</h3>
           </div>
-          <form id="modal-shipping-label-form" style="display:flex;flex-direction:column;height:100%;">
+          <form id="modal-shipping-label-form" style="display:flex;flex-direction:column;height:100%;margin-top: 40px;">
             <div id="modal-order-no-group" class="form-group"></div>
             <div class="form-group" id="modal-from-address-group"></div>
             <div class="form-group" id="modal-product-dimensions-group"></div>
@@ -36,7 +36,7 @@ export async function openShippingLabelModal(email, orders = []){
           <h3 style="margin:0 0 14px;font-size:16px;font-weight:600;">Recipient Details</h3>
           <button id="close-shipping-label-modal" aria-label="Close">&times;</button>
           </div>
-          <div id="modal-dynamic-address"></div>
+          <div id="modal-dynamic-address" style="margin-top:40px;"></div>
           <div id="modal-shipping-label-response" style="margin-top:10px;font-size:13px;"></div>
         </div>
       </div>
