@@ -1,5 +1,5 @@
 import { api } from '../core/api.js';
-import { FROM_ADDRESSES, PRODUCT_DIMENSIONS } from '../config/endpoints.js';
+import { FROM_ADDRESSES, PRODUCT_DIMENSIONS, FROM_ADDRESS_BOOK, PRODUCT_SPECS } from '../config/endpoints.js';
 
 function ensureContainer(){
   let modal = document.getElementById('shipping-label-modal');
@@ -49,24 +49,38 @@ export async function openShippingLabelModal(email, orders = []){
 
   buildOrderSelector(orders);
   buildStaticSelects();
+  buildFromDetails();
+  buildProductSpecs();
   // Prefill default selects if empty
   const fromSel = modal.querySelector('#modal-from-address');
   if(fromSel && !fromSel.value && fromSel.options.length) fromSel.selectedIndex = 0;
   const prodSel = modal.querySelector('#modal-product-dimensions');
   if(prodSel && !prodSel.value && prodSel.options.length) prodSel.selectedIndex = 0;
+  // Fill details after defaults applied
+  fillFromFromPreset();
+  fillProductFromPreset();
 
   // Submission now tied to bottom button (form still left column)
   modal.querySelector('#modal-shipping-label-form').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const orderNo = document.getElementById('modal-order-no')?.value.trim();
-    const payload = collectAddressPayload(orderNo, email);
+    const payload = buildShippingRequestPayload(orderNo, email);
     const respDiv = document.getElementById('modal-shipping-label-response');
     respDiv.textContent='Generating label...';
-    // Basic validation: all core fields must be present
-    const required = ['order_no','shipping_name','address_1','city','state','country','zipcode','phone','email','product_dimensions','from_address'];
-    const missing = required.filter(k=> !payload[k] && payload[k]!==0);
+    // Basic validation on essential fields
+    const required = [
+      document.getElementById('modal-shipping-name')?.value,
+      document.getElementById('modal-shipping-address1')?.value,
+      document.getElementById('modal-shipping-city')?.value,
+      document.getElementById('modal-shipping-state')?.value,
+      document.getElementById('modal-shipping-country')?.value,
+      document.getElementById('modal-shipping-zipcode')?.value,
+      document.getElementById('modal-shipping-phone')?.value,
+      document.getElementById('modal-shipping-email')?.value
+    ];
+    const missing = required.some(v=> !v || !String(v).trim());
     if(missing.length){
-      respDiv.innerHTML = `<span style='color:#b00020;'>Missing: ${missing.join(', ')}</span>`;
+      respDiv.innerHTML = `<span style='color:#b00020;'>Please fill all recipient fields.</span>`;
       return;
     }
     try {
@@ -117,28 +131,124 @@ function buildStaticSelects(){
   const fromGroup=document.getElementById('modal-from-address-group');
   if(fromGroup){
     fromGroup.innerHTML='<label for="modal-from-address">From Address:</label>'; const sel=document.createElement('select'); sel.id='modal-from-address'; FROM_ADDRESSES.forEach(a=>{ const o=document.createElement('option'); o.value=a; o.textContent=a; sel.appendChild(o); }); fromGroup.appendChild(sel);
+    const details=document.createElement('div'); details.id='modal-from-details'; details.className='form-subgroup'; fromGroup.appendChild(details);
   }
   const prodGroup=document.getElementById('modal-product-dimensions-group');
   if(prodGroup){
     prodGroup.innerHTML='<label for="modal-product-dimensions">Product Dimensions:</label>'; const sel=document.createElement('select'); sel.id='modal-product-dimensions'; PRODUCT_DIMENSIONS.forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); }); prodGroup.appendChild(sel);
+    const details=document.createElement('div'); details.id='modal-product-specs'; details.className='form-subgroup'; prodGroup.appendChild(details);
   }
 }
 
-function collectAddressPayload(order_no, email){
-  return {
-    order_no,
-    shipping_name: document.getElementById('modal-shipping-name')?.value.trim()||'',
-    address_1: document.getElementById('modal-shipping-address1')?.value.trim()||'',
-    address_2: document.getElementById('modal-shipping-address2')?.value.trim()||'',
-    city: document.getElementById('modal-shipping-city')?.value.trim()||'',
-    state: document.getElementById('modal-shipping-state')?.value.trim()||'',
-    country: document.getElementById('modal-shipping-country')?.value.trim()||'',
-    zipcode: document.getElementById('modal-shipping-zipcode')?.value.trim()||'',
-    phone: document.getElementById('modal-shipping-phone')?.value.trim()||'',
-    email: document.getElementById('modal-shipping-email')?.value.trim()|| email || '',
-    product_dimensions: document.getElementById('modal-product-dimensions')?.value.trim()||'',
-    from_address: document.getElementById('modal-from-address')?.value.trim()||''
+function buildFromDetails(){
+  const host = document.getElementById('modal-from-details');
+  if(!host) return;
+  host.innerHTML = `
+    <div class="form-group"><label>Full Name:</label><input type="text" id="modal-from-fullName"></div>
+    <div class="form-group"><label>Sender Name:</label><input type="text" id="modal-from-senderName"></div>
+    <div class="form-group"><label>Address 1:</label><input type="text" id="modal-from-address1"></div>
+    <div class="form-group"><label>Address 2:</label><input type="text" id="modal-from-address2"></div>
+    <div class="form-group"><label>City:</label><input type="text" id="modal-from-city"></div>
+    <div class="form-group"><label>State:</label><input type="text" id="modal-from-state"></div>
+    <div class="form-group"><label>Country:</label><input type="text" id="modal-from-country"></div>
+    <div class="form-group"><label>Zipcode:</label><input type="text" id="modal-from-zipCode"></div>
+    <div class="form-group"><label>Phone:</label><input type="text" id="modal-from-phoneNumber"></div>`;
+  const sel = document.getElementById('modal-from-address');
+  if(sel){ sel.addEventListener('change', fillFromFromPreset); }
+}
+
+function buildProductSpecs(){
+  const host = document.getElementById('modal-product-specs');
+  if(!host) return;
+  host.innerHTML = `
+    <div class="form-group"><label>Length:</label><input type="number" min="1" id="modal-prod-length"></div>
+    <div class="form-group"><label>Width:</label><input type="number" min="1" id="modal-prod-width"></div>
+    <div class="form-group"><label>Height:</label><input type="number" min="1" id="modal-prod-height"></div>
+    <div class="form-group"><label>Weight:</label><input type="number" min="1" id="modal-prod-weight"></div>`;
+  const sel = document.getElementById('modal-product-dimensions');
+  if(sel){ sel.addEventListener('change', fillProductFromPreset); }
+}
+
+function fillFromFromPreset(){
+  const sel = document.getElementById('modal-from-address');
+  const key = sel?.value;
+  const rec = FROM_ADDRESS_BOOK.find(x=> x.fullName === key) || FROM_ADDRESS_BOOK[0];
+  if(!rec) return;
+  setVal('modal-from-fullName', rec.fullName);
+  setVal('modal-from-senderName', rec.senderName);
+  setVal('modal-from-address1', rec.address1);
+  setVal('modal-from-address2', rec.address2 || '');
+  setVal('modal-from-city', rec.city);
+  setVal('modal-from-state', rec.state);
+  setVal('modal-from-country', rec.country);
+  setVal('modal-from-zipCode', rec.zipCode);
+  setVal('modal-from-phoneNumber', rec.phoneNumber);
+}
+
+function fillProductFromPreset(){
+  const sel = document.getElementById('modal-product-dimensions');
+  const key = sel?.value;
+  const spec = PRODUCT_SPECS[key] || PRODUCT_SPECS[Object.keys(PRODUCT_SPECS)[0]];
+  if(!spec) return;
+  setVal('modal-prod-length', spec.length);
+  setVal('modal-prod-width', spec.width);
+  setVal('modal-prod-height', spec.height);
+  setVal('modal-prod-weight', spec.weight);
+}
+
+function buildShippingRequestPayload(order_no, email){
+  const from = {
+    zipCode: getVal('modal-from-zipCode'),
+    fullName: getVal('modal-from-fullName'),
+    senderName: getVal('modal-from-senderName'),
+    address1: getVal('modal-from-address1'),
+    city: getVal('modal-from-city'),
+    state: getVal('modal-from-state'),
+    country: getVal('modal-from-country'),
+    extension: getVal('modal-from-address2'),
+    phoneNumber: getVal('modal-from-phoneNumber')
   };
+  const to = {
+    zipCode: getVal('modal-shipping-zipcode'),
+    fullName: getVal('modal-shipping-name'),
+    address1: getVal('modal-shipping-address1'),
+    city: getVal('modal-shipping-city'),
+    state: getVal('modal-shipping-state'),
+    country: getVal('modal-shipping-country'),
+    extension: getVal('modal-shipping-address2'),
+    phoneNumber: getVal('modal-shipping-phone')
+  };
+  const pkg = {
+    weight: toNum('modal-prod-weight'),
+    height: toNum('modal-prod-height'),
+    width: toNum('modal-prod-width'),
+    length: toNum('modal-prod-length')
+  };
+  // requestId + shipDate per provided logic
+  const requestId = (()=>{
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    const ms = String(now.getMilliseconds()).padStart(3, '0');
+    const rnd = Math.floor(Math.random() * 900 + 100);
+    return `${dd}${mm}${yyyy}${hh}${min}${ss}${ms}${dd}${rnd}`;
+  })();
+  const shipDate = new Date().toISOString().split('T')[0];
+  return [{
+    requestId,
+    shipDate,
+    serviceType: 'FEDEX_GROUND',
+    channel: 'NJF',
+    signature: 'NO_SIGNATURE_REQUIRED',
+    reference: 'ref-example',
+    from,
+    to,
+    packages: [pkg]
+  }];
 }
 
 function escapeHtml(str=''){
@@ -146,3 +256,7 @@ function escapeHtml(str=''){
     '"':'&quot;','&':'&amp;','\'':'&#39;','<' :'&lt;','>' :'&gt;'
   })[c]||c);
 }
+
+function setVal(id, v){ const el=document.getElementById(id); if(el) el.value = v ?? ''; }
+function getVal(id){ return (document.getElementById(id)?.value || '').trim(); }
+function toNum(id){ const n=parseFloat(getVal(id)); return Number.isFinite(n) ? n : undefined; }
