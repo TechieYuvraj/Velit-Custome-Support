@@ -48,17 +48,33 @@ function removeLocalTicketById(id){
 
 function mergeWithLocalTickets(serverList){
   const locals = readLocalTickets();
-  const serverIds = new Set((serverList||[]).map(t => String(t.id||'')));
+  const server = (serverList||[]).map(normalizeTicket).filter(Boolean);
+
+  const serverIds = new Set(server.map(t => String(t.id||'')));
   const onlyLocal = locals.filter(t => !serverIds.has(String(t.id||'')));
-  // Optional: if server already has them, drop from local store
-  if(onlyLocal.length !== locals.length){
-    writeLocalTickets(onlyLocal);
-  }
-  const merged = [...onlyLocal, ...(serverList||[])];
-  // sort newest first
+
+  const isStrictId = (id)=> /^VEL-\d{6}$/.test(String(id||''));
+  const hasLocalEquivalent = (s)=> locals.some(l => {
+    const emailMatch = (l.email||'').toLowerCase() && (s.email||'').toLowerCase() && (l.email||'').toLowerCase() === (s.email||'').toLowerCase();
+    const orderMatch = l.orderNo && s.orderNo && String(l.orderNo) === String(s.orderNo);
+    const shipMatch = l.shippingNo && s.shippingNo && String(l.shippingNo) === String(s.shippingNo);
+    const nameMatch = (l.customer||l.name||'').toLowerCase() && (s.customer||s.name||'').toLowerCase() && (l.customer||l.name||'').toLowerCase() === (s.customer||s.name||'').toLowerCase();
+    return emailMatch && (orderMatch || shipMatch || nameMatch);
+  });
+  // Drop server pseudo IDs when we have a matching local ticket within TTL
+  const acceptedServer = server.filter(s => isStrictId(s.id) || !hasLocalEquivalent(s));
+
+  // Persist pruned locals only (optional normalization of cache)
+  if(onlyLocal.length !== locals.length){ writeLocalTickets(onlyLocal); }
+
+  const merged = [...onlyLocal, ...acceptedServer];
   merged.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
   return merged;
 }
+
+// Helpers to detect id shapes
+function isStrictVelId(id){ return /^VEL-\d{6}$/.test(String(id||'')); }
+function isPseudoId(id){ return /^T-/.test(String(id||'')); }
 
 function ensureSubscribed(){
   if(unsub) return;
@@ -148,8 +164,9 @@ function normalizeTicket(t){
     };
   }
   // Expected fields from webhook can vary; map flexibly
+  const normalizedId = t.id || t.ticketId || t.TicketId || t.Ticket_id || t.number || '';
   return {
-    id: t.id || t.ticketId || t.TicketId || t.Ticket_id || t.number || `T-${Math.random().toString(36).slice(2,8)}`,
+    id: normalizedId,
     status: (t.status || t.Status || 'open').toString().trim().toLowerCase(),
     priority: (t.priority || t.Priority || 'normal').toString().trim().toLowerCase(),
     title: t.title || t.subject || t.Subject || '',
@@ -644,8 +661,34 @@ async function onSubmitCreateTicket(){
         createdAt: Date.now(), updatedAt: Date.now()
       });
       if(normalized){
-        // Replace local pending with server-normalized
-        updateArray('tickets', arr=> [normalized, ...arr.filter(t=> (t.id||'') !== ticketId)]);
+        // If server didn't return a valid Ticket ID, keep the client-generated strict VEL-xxxxxx
+        if(!normalized.id || isPseudoId(normalized.id) || !isStrictVelId(normalized.id)){
+          normalized.id = ticketId;
+        }
+        // Ensure essential details are retained if server response lacks them
+        if(!normalized.customer && !normalized.name){ normalized.customer = name; }
+        if(!normalized.email){ normalized.email = email; }
+        if(!normalized.orderNo){ normalized.orderNo = orderNo || undefined; }
+        if(!normalized.shippingNo){ normalized.shippingNo = shipNo || undefined; }
+        if(!normalized.createdAt){ normalized.createdAt = Date.now(); }
+        if(!normalized.updatedAt){ normalized.updatedAt = normalized.createdAt; }
+        // Replace local pending with server-normalized and drop any server pseudo duplicates
+        updateArray('tickets', arr=> {
+          const cleaned = arr.filter(t=> {
+            const tid = String(t.id||'');
+            if(tid === ticketId) return false;
+            if(isPseudoId(tid)){
+              const emailMatch = (t.email||'').toLowerCase() === (email||'').toLowerCase();
+              const nameMatch = (t.customer||t.name||'').toLowerCase() === (name||'').toLowerCase();
+              const orderMatch = !!(orderNo && t.orderNo && String(orderNo)===String(t.orderNo));
+              const shipMatch = !!(shipNo && t.shippingNo && String(shipNo)===String(t.shippingNo));
+              const timeClose = Math.abs((t.createdAt||0) - (normalized.createdAt||Date.now())) < 5*60*1000;
+              if(emailMatch && timeClose && (orderMatch || shipMatch || nameMatch)) return false;
+            }
+            return true;
+          });
+          return [normalized, ...cleaned];
+        });
         // Remove from local cache once server has accepted
         removeLocalTicketById(ticketId);
       }
