@@ -1218,6 +1218,30 @@ select#shipping-status-filter {padding:10px 14px;border:1px solid #b8dacf;border
 .fade-in-fast {animation:fadeIn .18s ease;}
 
 /* Responsive adjustments for new grids */
+/* Tickets: Linked sections and cards */
+.ticket-linked {background:#fff;border:1px solid #d7e6e1;border-radius:10px;padding:10px}
+.ticket-linked h4 {font-size:.85rem;margin:0 0 8px;color:#194b3b}
+.linked-sections {grid-template-columns:1fr 1fr;gap:10px}
+.linked-block {display:flex;flex-direction:column;gap:8px}
+.linked-title {font-size:.8rem;color:#275f4e;font-weight:600}
+.linked-card {background:#f8fbfa;border:1px solid #d7e6e1;border-radius:10px;padding:10px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.linked-card .lc-header {display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.linked-card .lc-title {font-weight:600;color:#194b3b;display:flex;align-items:center;gap:6px}
+.linked-card .lc-meta {font-size:.75rem;color:#64748b}
+.linked-card .lc-body {display:flex;flex-direction:column;gap:6px}
+.linked-card .lc-row {display:flex;justify-content:space-between;gap:10px}
+.linked-card .lc-row .k {color:#475569;font-size:.8rem}
+.linked-card .lc-row .v {color:#111827;font-weight:500}
+.linked-card .lc-tags {display:flex;gap:6px}
+.order-card {border-left:4px solid #275f4e}
+.ship-card {border-left:4px solid #385a4f}
+.lc-note {margin-top:6px;background:#fff;border:1px dashed #cfe2dc;border-radius:8px;padding:8px;color:#194b3b}
+.empty {color:#6b7280;font-size:.85rem}
+.muted {color:#6b7280}
+
+@media (max-width: 900px) {
+    .linked-sections {grid-template-columns:1fr}
+}
 @media (max-width:860px){
     .cards-grid {grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}
 }

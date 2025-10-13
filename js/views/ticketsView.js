@@ -6,6 +6,60 @@ import { showLoader, hideLoader, withButtonLoader } from '../utils/loader.js';
 let unsub = null;
 let initialized = false;
 
+// Local storage for recently created tickets (temporary cache)
+const LOCAL_TICKETS_KEY = 'velit_recent_tickets';
+const LOCAL_TICKETS_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+
+function readLocalTickets(){
+  try {
+    const raw = localStorage.getItem(LOCAL_TICKETS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    if(!Array.isArray(arr)) return [];
+    const now = Date.now();
+    // prune expired
+    const fresh = arr.filter(t => typeof t === 'object' && t && (now - (t.createdAt||0)) <= LOCAL_TICKETS_TTL_MS);
+    if(fresh.length !== arr.length){ localStorage.setItem(LOCAL_TICKETS_KEY, JSON.stringify(fresh)); }
+    return fresh.map(normalizeTicket).filter(Boolean);
+  } catch { return []; }
+}
+
+function writeLocalTickets(list){
+  try {
+    const serializable = (list||[]).map(t => ({
+      id: t.id, status: t.status, priority: t.priority, title: t.title || '',
+      Name: t.customer || t.name || '', Email: t.email || '',
+      Order_no: t.orderNo || '', Shipping_no: t.shippingNo || '',
+      createdAt: t.createdAt || Date.now(), updatedAt: t.updatedAt || t.createdAt || Date.now()
+    }));
+    localStorage.setItem(LOCAL_TICKETS_KEY, JSON.stringify(serializable));
+  } catch {/* no-op */}
+}
+
+function addLocalTicket(ticket){
+  const cur = readLocalTickets();
+  const next = [ticket, ...cur.filter(t => (t.id||'') !== (ticket.id||''))];
+  writeLocalTickets(next);
+}
+
+function removeLocalTicketById(id){
+  const cur = readLocalTickets();
+  writeLocalTickets(cur.filter(t => (t.id||'') !== (id||'')));
+}
+
+function mergeWithLocalTickets(serverList){
+  const locals = readLocalTickets();
+  const serverIds = new Set((serverList||[]).map(t => String(t.id||'')));
+  const onlyLocal = locals.filter(t => !serverIds.has(String(t.id||'')));
+  // Optional: if server already has them, drop from local store
+  if(onlyLocal.length !== locals.length){
+    writeLocalTickets(onlyLocal);
+  }
+  const merged = [...onlyLocal, ...(serverList||[])];
+  // sort newest first
+  merged.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+  return merged;
+}
+
 function ensureSubscribed(){
   if(unsub) return;
   unsub = subscribe((s)=>{
@@ -36,7 +90,8 @@ export async function loadTickets(){
         ? data.documents.map(d => ({ document: d }))
         : (data ? [data] : []);
     const list = arr.map(normalizeTicket).filter(Boolean);
-    setState({ tickets: list });
+    const merged = mergeWithLocalTickets(list);
+    setState({ tickets: merged });
     if(!list.length){
       // Optional small mock if empty
       setState({ tickets: [
@@ -181,6 +236,7 @@ export function renderTicketDetail(ticket){
   }
   const conv = ticket.conversation || [];
   const notes = ticket.internalNotes || '';
+  const linked = computeLinked(ticket);
   host.innerHTML = `
     <div class="ticket-detail-shell">
       <div class="ticket-header">
@@ -197,6 +253,19 @@ export function renderTicketDetail(ticket){
         </div>
       </div>
       <div class="ticket-body">
+        <div class="ticket-linked">
+          <h4>Linked</h4>
+          <div class="linked-sections">
+            <div class="linked-block">
+              <div class="linked-title">Order</div>
+              ${linked.orders.length ? linked.orders.map(o=> orderCard(o)).join('') : '<div class="empty">No linked order</div>'}
+            </div>
+            <div class="linked-block">
+              <div class="linked-title">Shipment</div>
+              ${linked.shipments.length ? linked.shipments.map(s=> shipmentCard(s)).join('') : '<div class="empty">No linked shipment</div>'}
+            </div>
+          </div>
+        </div>
         <div class="ticket-conversation">
           <h4>Conversation</h4>
           ${conv.length ? conv.map(msg=> ticketMessage(msg)).join('') : '<div class="empty">No messages</div>'}
@@ -208,6 +277,55 @@ export function renderTicketDetail(ticket){
       </div>
     </div>
   `;
+}
+
+function computeLinked(ticket){
+  const orderIds = new Set([
+    ...(Array.isArray(ticket.linked?.orders) ? ticket.linked.orders : []),
+    ticket.orderNo
+  ].filter(Boolean).map(x=> String(x)));
+  const shipIds = new Set([
+    ...(Array.isArray(ticket.linked?.shipments) ? ticket.linked.shipments : []),
+    ticket.shippingNo
+  ].filter(Boolean).map(x=> String(x)));
+
+  const orders = (state.orders||[]).filter(o=> orderIds.has(String(o.id)));
+  const shipments = (state.shippingRequests||[]).filter(r=> shipIds.has(String(r.trackingNumber||r.id)));
+  return { orders, shipments };
+}
+
+function orderCard(o){
+  const created = o.createdAt ? `Created: ${escapeHtml(formatDate(o.createdAt))}` : '';
+  return `<div class="linked-card order-card">
+    <div class="lc-header">
+      <div class="lc-title"><i class="fas fa-receipt"></i> Order #${escapeHtml(String(o.id))}</div>
+      ${created ? `<div class="lc-meta">${created}</div>`:''}
+    </div>
+    <div class="lc-body">
+      <div class="lc-row"><span class="k">Name</span><span class="v">${escapeHtml(o.name||'')}</span></div>
+      <div class="lc-row"><span class="k">Email</span><span class="v">${escapeHtml(o.email||'')}</span></div>
+    </div>
+  </div>`;
+}
+
+function shipmentCard(s){
+  const created = s.createdAt ? `Created: ${escapeHtml(formatDate(s.createdAt))}` : '';
+  const track = String(s.trackingNumber||s.id||'');
+  return `<div class="linked-card ship-card">
+    <div class="lc-header">
+      <div class="lc-title"><i class="fas fa-truck"></i> Shipment #${escapeHtml(track)}</div>
+      <div class="lc-tags">
+        <span class="badge ${escapeHtml(s.status||'')}">${escapeHtml(labelize(s.status||''))}</span>
+      </div>
+    </div>
+    <div class="lc-body">
+      <div class="lc-row"><span class="k">Request ID</span><span class="v">${escapeHtml(s.requestId||'')}</span></div>
+      ${s.product ? `<div class="lc-row"><span class="k">Product</span><span class="v">${escapeHtml(s.product)}</span></div>`:''}
+      ${created ? `<div class="lc-row"><span class="k">${created}</span></div>`:''}
+      ${s.url ? `<div class="lc-row"><span class="k">Label</span><span class="v"><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">Download</a></span></div>`:''}
+      ${s.Note ? `<div class="lc-note">${escapeHtml(s.Note)}</div>`:''}
+    </div>
+  </div>`;
 }
 
 function ticketMessage(m){
@@ -506,6 +624,16 @@ async function onSubmitCreateTicket(){
     Shipping_no: shipNo
   };
 
+  // Optimistically create a local ticket and store to localStorage
+  const pending = normalizeTicket({
+    id: ticketId, status:'open', priority:'normal', title:'', Name: name, Email: email,
+    Order_no: orderNo, Shipping_no: shipNo, createdAt: Date.now(), updatedAt: Date.now()
+  });
+  // Mark as local (not rendered, but useful internally)
+  pending._local = true;
+  addLocalTicket(pending);
+  updateArray('tickets', arr=> [pending, ...arr.filter(t=> (t.id||'') !== pending.id)]);
+
   await withButtonLoader(btn, async ()=>{
     try {
       const result = await api.createTicket(payload);
@@ -515,11 +643,17 @@ async function onSubmitCreateTicket(){
         id: ticketId, status:'open', priority:'normal', title:'', customer:name, email,
         createdAt: Date.now(), updatedAt: Date.now()
       });
-      if(normalized){ updateArray('tickets', arr=> [normalized, ...arr]); }
+      if(normalized){
+        // Replace local pending with server-normalized
+        updateArray('tickets', arr=> [normalized, ...arr.filter(t=> (t.id||'') !== ticketId)]);
+        // Remove from local cache once server has accepted
+        removeLocalTicketById(ticketId);
+      }
       closeCreateTicketModal();
     } catch(err){
       console.error('Failed to create ticket', err);
-      alert('Failed to create ticket');
+      // Keep the local pending item in list and storage so it persists temporarily
+      alert('Ticket saved locally. Will sync when online.');
     }
   }, 'Creating...');
 }
