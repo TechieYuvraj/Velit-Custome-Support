@@ -77,6 +77,8 @@ function normalizeRequest(r){
   // New shape sample:
   // { Product, Status, trackingNumber, requestId, orderId, url, Email, Name }
   const status = (r.Status || r.status || 'pending').toString().trim().toLowerCase().replace(/\s+/g,'_');
+  // Parse date string if provided (e.g., '2025-10-13'); no fallback to Date.now()
+  const createdAt = r.Time || r.createdAt || r.created_at || (r.Date ? Date.parse(r.Date) : undefined);
   return {
     id: r.requestId || r.trackingNumber || r.orderId || `REQ-${Math.random().toString(36).slice(2,8)}`,
     product: r.Product || r.product || '',
@@ -87,7 +89,8 @@ function normalizeRequest(r){
     url: r.url || '',
     email: r.Email || r.email || '',
     name: r.Name || r.shipping_name || r['Shipping Name'] || r.name || '',
-    createdAt: r.Time || r.createdAt || r.created_at || Date.now()
+    note: r.Note || r.note || '',
+    createdAt
   };
 }
 
@@ -135,6 +138,7 @@ function cardHtml(r){
     <div class="sr-body-fields">
       <div class="sr-line">${escapeHtml(r.requestId || '')}</div>
       <div class="sr-line"><span class="order-id-label">Order ID:</span> <span>${escapeHtml(r.orderId || 'N/A')}</span></div>
+      ${r.note ? `<div class="sr-line"><span class="note-label">Note:</span> <span>${escapeHtml(r.note)}</span></div>` : ''}
     </div>
     <div class="sr-actions" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
       ${r.url ? `<button class="mini-btn" onclick="window.open('${r.url}','_blank')">Label</button>`:''}

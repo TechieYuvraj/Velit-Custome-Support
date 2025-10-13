@@ -34,7 +34,16 @@ export const api = {
   fetchConversations: (from_date, to_date) => request(ENDPOINTS.conversations, { body: { from_date, to_date } }),
   fetchMessages: (conversationId) => request(`${ENDPOINTS.messages}?conversation_id=${encodeURIComponent(conversationId)}`, { method: 'GET' }),
   fetchOrdersByEmail: (email) => request(ENDPOINTS.ordersByEmail, { body: { email } }),
-  createShippingLabel: (payload) => request(ENDPOINTS.shippingLabel, { body: payload }),
+  createShippingLabel: (payload, meta = {}) => {
+    const params = [];
+    if (meta.date) params.push(`date=${encodeURIComponent(meta.date)}`);
+    if (meta.product) params.push(`product=${encodeURIComponent(meta.product)}`);
+    if (meta.orderId) params.push(`orderId=${encodeURIComponent(meta.orderId)}`);
+    if (meta.Name) params.push(`Name=${encodeURIComponent(meta.Name)}`);
+    if (meta.Email) params.push(`Email=${encodeURIComponent(meta.Email)}`);
+    const url = params.length ? `${ENDPOINTS.shippingLabel}?${params.join('&')}` : ENDPOINTS.shippingLabel;
+    return request(url, { body: payload });
+  },
   fetchLabelHistory: (email) => request(ENDPOINTS.labelHistory, { body: email ? { email } : {} }),
   updateStatus: (session_id, status, from_email) => request(ENDPOINTS.updateStatus, { method: 'PATCH', body: { session_id, status, from_email } }),
   sendEmail: (payload) => request(ENDPOINTS.sendEmail, { body: payload }),

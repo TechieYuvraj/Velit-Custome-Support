@@ -170,7 +170,14 @@ async function handleSubmit(e){
     packages: [pkg]
   }];
   try {
-    await api.createShippingLabel(payload); // ignoring response per spec
+    const meta = {
+      date: shipDate,
+      product: prodKey,
+      orderId: order_no,
+      Name: to.fullName || '',
+      Email: email
+    };
+    await api.createShippingLabel(payload, meta); // ignoring response per spec
     statusMsg.innerHTML = '<span style="color:#195744;font-weight:600;">Request queued. Appears live in list in ~40s.</span>';
     const placeholderId = `pending-${Date.now()}`;
     const createdAt = Date.now();

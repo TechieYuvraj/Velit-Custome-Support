@@ -84,7 +84,12 @@ export async function openShippingLabelModal(email, orders = []){
       return;
     }
     try {
-      await api.createShippingLabel(payload);
+      const Name = document.getElementById('modal-shipping-name')?.value || '';
+      const EmailAddr = document.getElementById('modal-shipping-email')?.value || '';
+      const product = document.getElementById('modal-product-dimensions')?.value || '';
+      const today = new Date().toISOString().split('T')[0];
+      const meta = { date: today, product, orderId: orderNo, Name, Email: EmailAddr };
+      await api.createShippingLabel(payload, meta);
       respDiv.innerHTML='<div style="color:#195744;font-weight:600;">Submitted.</div><pre style="margin-top:6px;background:#f5f5f5;padding:8px;border-radius:6px;max-height:140px;overflow:auto;font-size:11px;">'+escapeHtml(JSON.stringify(payload,null,2))+'</pre>';
     } catch(err){
       respDiv.innerHTML = '<span style="color:#b00020;">Failed to submit.</span>';
