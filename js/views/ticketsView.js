@@ -136,15 +136,26 @@ function normalizeTicket(t){
     };
     const createdAt = doc.createTime ? Date.parse(doc.createTime) : undefined;
     const updatedAt = doc.updateTime ? Date.parse(doc.updateTime) : undefined;
+    const parseIds = (s)=> (typeof s === 'string' ? s.split(',').map(x=>x.trim()).filter(Boolean) : []);
     // Build a flat object using expected keys
     const flat = {
       Name: val(f.Name),
       Email: val(f.Email),
-      Ticket_id: val(f.Ticket_id),
-      Order_no: val(f.Order_no),
-      Shipping_no: val(f.Shipping_no),
+      Ticket_id: val(f.Ticket_id) || val(f.TicketId),
+      Order_no: val(f.Order_no) || val(f.LinkedOrderId),
+      Shipping_no: val(f.Shipping_no) || val(f.LinkedShippingId),
+      LinkedOrderId: val(f.LinkedOrderId),
+      LinkedShippingId: val(f.LinkedShippingId),
+      LinkedConversationId: val(f.LinkedConversationId),
+      LinkedTicketId: val(f.LinkedTicketId),
       timestamp: val(f.timestamp),
-      createdAt, updatedAt
+      createdAt, updatedAt,
+      _linked: {
+        orders: parseIds(val(f.LinkedOrderId)),
+        shipments: parseIds(val(f.LinkedShippingId)),
+        conversations: parseIds(val(f.LinkedConversationId)),
+        tickets: parseIds(val(f.LinkedTicketId))
+      }
     };
     // Remap for common handling below
     t = {
@@ -155,7 +166,11 @@ function normalizeTicket(t){
       orderNo: flat.Order_no,
       shippingNo: flat.Shipping_no,
       createdAt: flat.timestamp || flat.createdAt || Date.now(),
-      updatedAt: flat.timestamp || flat.updatedAt || Date.now()
+      updatedAt: flat.timestamp || flat.updatedAt || Date.now(),
+      linkedOrders: flat._linked.orders,
+      linkedShipments: flat._linked.shipments,
+      linkedConversations: flat._linked.conversations,
+      linkedTickets: flat._linked.tickets
     };
   }
   // Expected fields from webhook can vary; map flexibly
@@ -174,10 +189,10 @@ function normalizeTicket(t){
     orderNo: t.orderNo || t.Order_no || t.order || undefined,
     shippingNo: t.shippingNo || t.Shipping_no || t.trackingNumber || undefined,
     linked: {
-      tickets: t.linkedTickets || [],
-      orders: t.linkedOrders || (t.Order_no ? [t.Order_no] : []),
-      shipments: t.linkedShipments || (t.Shipping_no ? [t.Shipping_no] : []),
-      conversations: t.linkedConversations || []
+      tickets: t.linkedTickets || t.LinkedTicketId || [],
+      orders: t.linkedOrders || t.LinkedOrderId || (t.Order_no ? [t.Order_no] : []),
+      shipments: t.linkedShipments || t.LinkedShippingId || (t.Shipping_no ? [t.Shipping_no] : []),
+      conversations: t.linkedConversations || t.LinkedConversationId || []
     }
   };
 }
@@ -246,9 +261,8 @@ export function renderTicketDetail(ticket){
     host.innerHTML = `<div class="detail-placeholder"><i class="fas fa-ticket"></i><p>Select a ticket to view details</p></div>`;
     return;
   }
-  const conv = ticket.conversation || [];
-  const notes = ticket.internalNotes || '';
-  const linked = computeLinked(ticket);
+  // We remove legacy cards, conversation and internal notes sections.
+  // Render 4 columns for linked nuggets instead.
   host.innerHTML = `
     <div class="ticket-detail-shell">
       <div class="ticket-header">
@@ -265,30 +279,11 @@ export function renderTicketDetail(ticket){
         </div>
       </div>
       <div class="ticket-body">
-        <div class="ticket-linked">
-          <h4>Linked</h4>
-          <div class="linked-sections">
-            <div class="linked-block">
-              <div class="linked-title">Order</div>
-              ${linked.orders.length ? linked.orders.map(o=> orderCard(o)).join('') : '<div class="empty">No linked order</div>'}
-            </div>
-            <div class="linked-block">
-              <div class="linked-title">Shipment</div>
-              ${linked.shipments.length ? linked.shipments.map(s=> shipmentCard(s)).join('') : '<div class="empty">No linked shipment</div>'}
-            </div>
-          </div>
-        </div>
-        <div class="ticket-conversation">
-          <h4>Conversation</h4>
-          ${conv.length ? conv.map(msg=> ticketMessage(msg)).join('') : '<div class="empty">No messages</div>'}
-        </div>
-        <div class="ticket-notes">
-          <h4>Internal Notes</h4>
-          <div class="note-card">${escapeHtml(notes)}</div>
-        </div>
+        ${renderLinkedNuggetColumns(ticket)}
       </div>
     </div>
   `;
+  bindNuggetClicks();
 }
 
 function computeLinked(ticket){
@@ -338,6 +333,137 @@ function shipmentCard(s){
       ${s.Note ? `<div class="lc-note">${escapeHtml(s.Note)}</div>`:''}
     </div>
   </div>`;
+}
+
+function renderLinkedNuggets(t){
+  const mk = (label, type, arr)=>{
+    const ids = Array.isArray(arr) ? arr : (typeof arr==='string' ? arr.split(',').map(x=>x.trim()).filter(Boolean) : []);
+    if(!ids.length) return '';
+    const chips = ids.map(id=> `<span class="nugget" data-type="${type}" data-id="${escapeHtml(String(id))}">${escapeHtml(String(id))}</span>`).join('');
+    return `<div class="nugget-row"><span class="nugget-label">${escapeHtml(label)}:</span> <div class="nugget-wrap">${chips}</div></div>`;
+  };
+  return `<div class="ticket-nuggets">${[
+    mk('Linked Tickets','ticket', t.linked?.tickets),
+    mk('Linked Orders','order', t.linked?.orders),
+    mk('Linked Shipments','shipment', t.linked?.shipments),
+    mk('Linked Conversations','conversation', t.linked?.conversations)
+  ].filter(Boolean).join('')}</div>`;
+}
+
+function renderLinkedNuggetColumns(t){
+  const mkChips = (type, arr)=>{
+    const ids = Array.isArray(arr) ? arr : (typeof arr==='string' ? arr.split(',').map(x=>x.trim()).filter(Boolean) : []);
+    if(!ids.length) return '<div class="empty">None</div>';
+    return `<div class="nugget-wrap">${ids.map(id=> `<span class="nugget" data-type="${type}" data-id="${escapeHtml(String(id))}">${escapeHtml(String(id))}</span>`).join('')}</div>`;
+  };
+  return `
+    <div class="nugget-columns">
+      <div class="nugget-col">
+        <div class="linked-title">Linked Orders</div>
+        ${mkChips('order', t.linked?.orders)}
+      </div>
+      <div class="nugget-col">
+        <div class="linked-title">Linked Shipments</div>
+        ${mkChips('shipment', t.linked?.shipments)}
+      </div>
+      <div class="nugget-col">
+        <div class="linked-title">Linked Conversations</div>
+        ${mkChips('conversation', t.linked?.conversations)}
+      </div>
+      <div class="nugget-col">
+        <div class="linked-title">Linked Tickets</div>
+        ${mkChips('ticket', t.linked?.tickets)}
+      </div>
+    </div>
+  `;
+}
+
+function bindNuggetClicks(){
+  const host = document.getElementById('ticket-detail');
+  if(!host) return;
+  host.querySelectorAll('.nugget').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const type = el.getAttribute('data-type');
+      const id = el.getAttribute('data-id');
+      openLinkedDetailModal(type, id);
+    });
+  });
+}
+
+function ensureLinkedModal(){
+  let m = document.getElementById('linked-detail-modal');
+  if(!m){
+    m = document.createElement('div');
+    m.id = 'linked-detail-modal';
+    m.className = 'modal-overlay';
+    m.style.display = 'none';
+    m.innerHTML = `<div class="modal-content" style="max-width:640px;">
+      <div class="modal-header"><h3 id="linked-modal-title">Details</h3><button class="modal-close" id="linked-modal-close">&times;</button></div>
+      <div class="modal-body" id="linked-modal-body"></div>
+    </div>`;
+    document.body.appendChild(m);
+    m.querySelector('#linked-modal-close').addEventListener('click', ()=> m.style.display='none');
+    m.addEventListener('click', (e)=>{ if(e.target===m) m.style.display='none'; });
+  }
+  return m;
+}
+
+function openLinkedDetailModal(type, id){
+  const modal = ensureLinkedModal();
+  const titleEl = modal.querySelector('#linked-modal-title');
+  const bodyEl = modal.querySelector('#linked-modal-body');
+  titleEl.textContent = `${type[0].toUpperCase()+type.slice(1)} ${id}`;
+  bodyEl.innerHTML = renderLinkedDetail(type, id);
+  modal.style.display = 'flex';
+}
+
+function renderLinkedDetail(type, id){
+  try{
+    if(type==='order'){
+      const o = (state.orders||[]).find(x=> String(x.id)===String(id));
+      if(!o) return '<div class="empty">Order not found.</div>';
+      return `<div class="detail-grid">
+        <div><strong>Order ID:</strong> ${escapeHtml(String(o.id))}</div>
+        <div><strong>Name:</strong> ${escapeHtml(o.name||'')}</div>
+        <div><strong>Email:</strong> ${escapeHtml(o.email||'')}</div>
+        <div><strong>Address:</strong> ${escapeHtml([o.address?.line1,o.address?.line2,o.address?.city,o.address?.state,o.address?.zip,o.address?.country].filter(Boolean).join(', '))}</div>
+      </div>`;
+    }
+    if(type==='shipment'){
+      const s = (state.shippingRequests||[]).find(x=> String(x.trackingNumber||x.id)===String(id));
+      if(!s) return '<div class="empty">Shipment not found.</div>';
+      return `<div class="detail-grid">
+        <div><strong>Tracking:</strong> ${escapeHtml(String(s.trackingNumber||s.id||''))}</div>
+        <div><strong>Status:</strong> ${escapeHtml(String(s.status||''))}</div>
+        <div><strong>Request ID:</strong> ${escapeHtml(String(s.requestId||''))}</div>
+        ${s.url?`<div><strong>Label:</strong> <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">Open</a></div>`:''}
+      </div>`;
+    }
+    if(type==='conversation'){
+      const c = (state.emailConversations||[]).find(x=> String(x.id||x.conversation_id||x.threadId)===String(id));
+      if(!c) return '<div class="empty">Conversation not found.</div>';
+      return `<div class="detail-grid">
+        <div><strong>Subject:</strong> ${escapeHtml(c.subject||'')}</div>
+        <div><strong>Name:</strong> ${escapeHtml(c.name||'')}</div>
+        <div><strong>Email:</strong> ${escapeHtml(c.email||'')}</div>
+        <div><strong>Channel:</strong> ${escapeHtml(c.channel_type||'')}</div>
+      </div>`;
+    }
+    if(type==='ticket'){
+      const t = (state.tickets||[]).find(x=> String(x.id)===String(id));
+      if(!t) return '<div class="empty">Ticket not found.</div>';
+      return `<div class="detail-grid">
+        <div><strong>Ticket:</strong> ${escapeHtml(String(t.id))}</div>
+        <div><strong>Status:</strong> ${escapeHtml(String(t.status))}</div>
+        <div><strong>Priority:</strong> ${escapeHtml(String(t.priority))}</div>
+        <div><strong>Name:</strong> ${escapeHtml(t.customer||'')}</div>
+        <div><strong>Email:</strong> ${escapeHtml(t.email||'')}</div>
+      </div>`;
+    }
+    return '<div class="empty">Unsupported type.</div>';
+  }catch(e){
+    return '<div class="empty">Failed to render details.</div>';
+  }
 }
 
 function ticketMessage(m){
@@ -805,6 +931,9 @@ async function onSubmitCreateTicket(){
   const shipIds = [...selectedShipmentIds];
   const convIds = [...selectedConversationIds];
   const tickIds = [...selectedTicketIds];
+  // Derive primary order/shipment for backfill convenience
+  const orderNo = orderIds[0] || undefined;
+  const shipNo = shipIds[0] || undefined;
 
   if(!email || !ticketId){
     alert('Please fill Email (and Ticket ID will auto-generate).');
