@@ -105,15 +105,10 @@ export async function loadTickets(){
       : (data && Array.isArray(data.documents))
         ? data.documents.map(d => ({ document: d }))
         : (data ? [data] : []);
-    const list = arr.map(normalizeTicket).filter(Boolean);
-    const merged = mergeWithLocalTickets(list);
-    setState({ tickets: merged });
-    if(!list.length){
-      // Optional small mock if empty
-      setState({ tickets: [
-        { id: 'VEL-00012', status: 'open', priority: 'high', customer: 'Jane Doe', email: 'jane@acme.com', createdAt: Date.now()-3600000, updatedAt: Date.now()-120000, title: 'ECU error on startup', notes: 'Reported ECU malfunction' }
-      ]});
-    }
+  const list = arr.map(normalizeTicket).filter(Boolean);
+  setState({ tickets: list });
+  // If server returned no tickets, clear any local cached tickets to avoid showing phantom items
+  if(!list.length){ writeLocalTickets([]); }
   } catch (e){
     console.error('Failed to fetch tickets', e);
   } finally {
@@ -367,33 +362,80 @@ function ensureCreateTicketModal(){
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label>Name</label>
-            <div class="search-dropdown">
-              <input id="ct-name" class="form-control" placeholder="Select or type name" />
-              <ul id="ct-name-results" class="search-results" style="display:none;"></ul>
-            </div>
-          </div>
-          <div class="form-group">
             <label>Email</label>
             <div class="search-dropdown">
               <input id="ct-email" class="form-control" placeholder="Select or type email" />
               <ul id="ct-email-results" class="search-results" style="display:none;"></ul>
             </div>
           </div>
-          <div class="form-group"><label>Ticket ID</label><input id="ct-ticket-id" class="form-control" placeholder="Auto-generated" /></div>
           <div class="form-group">
-            <label>Order No</label>
+            <label>Name</label>
             <div class="search-dropdown">
-              <input id="ct-order-search" class="form-control" placeholder="Search orders..." />
-              <ul id="ct-order-results" class="search-results" style="display:none;"></ul>
+              <input id="ct-name" class="form-control" placeholder="Select or type name" />
+              <ul id="ct-name-results" class="search-results" style="display:none;"></ul>
+            </div>
+          </div>
+          <div class="form-group"><label>Phone</label><input id="ct-phone" class="form-control" placeholder="Optional phone" /></div>
+          <div class="form-group"><label>Ticket ID</label><input id="ct-ticket-id" class="form-control" placeholder="Auto-generated" readonly /></div>
+          <div class="form-row" style="display:flex;gap:10px;">
+            <div class="form-group" style="flex:1">
+              <label>Status</label>
+              <select id="ct-status" class="form-control" disabled>
+                <option value="open" selected>Open</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex:1">
+              <label>Priority</label>
+              <select id="ct-priority" class="form-control">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row" style="display:flex;gap:10px;">
+            <div class="form-group" style="flex:1"><label>Category</label><input id="ct-category" class="form-control" placeholder="e.g. Support" /></div>
+            <div class="form-group" style="flex:1">
+              <label>Source Channel</label>
+              <select id="ct-source" class="form-control">
+                <option value="email">Email</option>
+                <option value="chat">Chat</option>
+                <option value="phone">Phone</option>
+                <option value="web">Web</option>
+              </select>
             </div>
           </div>
           <div class="form-group">
-            <label>Shipping No</label>
+            <label>Linked Orders</label>
             <div class="search-dropdown">
-              <input id="ct-ship-search" class="form-control" placeholder="Search shipping requests..." />
+              <input id="ct-order-search" class="form-control" placeholder="Search orders... (filtered by email)" />
+              <ul id="ct-order-results" class="search-results" style="display:none;"></ul>
+            </div>
+            <div id="ct-order-selected" class="chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+          </div>
+          <div class="form-group">
+            <label>Linked Shipments</label>
+            <div class="search-dropdown">
+              <input id="ct-ship-search" class="form-control" placeholder="Search shipping requests... (filtered by email)" />
               <ul id="ct-ship-results" class="search-results" style="display:none;"></ul>
             </div>
+            <div id="ct-ship-selected" class="chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+          </div>
+          <div class="form-group">
+            <label>Linked Conversations</label>
+            <div class="search-dropdown">
+              <input id="ct-conv-search" class="form-control" placeholder="Search conversations... (filtered by email)" />
+              <ul id="ct-conv-results" class="search-results" style="display:none;"></ul>
+            </div>
+            <div id="ct-conv-selected" class="chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+          </div>
+          <div class="form-group">
+            <label>Linked Tickets</label>
+            <div class="search-dropdown">
+              <input id="ct-tick-search" class="form-control" placeholder="Search tickets... (filtered by email)" />
+              <ul id="ct-tick-results" class="search-results" style="display:none;"></ul>
+            </div>
+            <div id="ct-tick-selected" class="chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
           </div>
         </div>
         <div class="modal-footer">
@@ -408,10 +450,12 @@ function ensureCreateTicketModal(){
   document.getElementById('ct-submit')?.addEventListener('click', onSubmitCreateTicket);
 
   // wire search inputs
-  wireOrderSearch();
-  wireShipSearch();
-  wireNameDropdown();
   wireEmailDropdown();
+  wireNameDropdown();
+  wireOrderMulti();
+  wireShipMulti();
+  wireConvMulti();
+  wireTicketMulti();
 }
 
 export function openCreateTicketModal(){
@@ -431,18 +475,33 @@ window.closeCreateTicketModal = function(){
   if(modal){ modal.style.display='none'; }
 };
 
-let selectedOrderNo = '';
-let selectedShipNo = '';
+let selectedOrderIds = [];
+let selectedShipmentIds = [];
+let selectedConversationIds = [];
+let selectedTicketIds = [];
 let selectedName = '';
 let selectedEmail = '';
 
-function wireOrderSearch(){
+function addChip(containerId, idVal, onRemove){
+  const wrap = document.getElementById(containerId); if(!wrap) return;
+  const chip = document.createElement('span');
+  chip.className = 'chip';
+  chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:#eef6f4;border:1px solid #cfe2dc;color:#194b3b;padding:4px 8px;border-radius:999px;font-size:.78rem;';
+  chip.innerHTML = `${escapeHtml(String(idVal))} <button aria-label="Remove" style="border:none;background:transparent;color:#194b3b;cursor:pointer;font-weight:700">×</button>`;
+  const btn = chip.querySelector('button');
+  btn.addEventListener('click', ()=>{ chip.remove(); onRemove?.(); });
+  wrap.appendChild(chip);
+}
+
+function wireOrderMulti(){
   const input = document.getElementById('ct-order-search');
   const listEl = document.getElementById('ct-order-results');
   if(!input || !listEl) return;
   const makeItems = (term)=>{
     const termL = term.toLowerCase();
-    const items = (state.orders||[]).filter(o=>{
+    let base = (state.orders||[]);
+    if(selectedEmail){ base = base.filter(o=> (o.email||'').toLowerCase() === selectedEmail.toLowerCase()); }
+    const items = base.filter(o=>{
       const hay = [o.id,o.name,o.email,o.phone,o.address?.line1,o.address?.city,o.address?.state,o.address?.zip].join(' ').toLowerCase();
       return hay.includes(termL);
     }).slice(0,10);
@@ -452,8 +511,9 @@ function wireOrderSearch(){
   // toggle open on click; render recent on first open
   input.addEventListener('click', ()=>{
     if(listEl.style.display === 'none' || !listEl.style.display){
-      // show recent 10
-      const recent = [...(state.orders||[])].slice(-10).reverse();
+      let recent = [...(state.orders||[])];
+      if(selectedEmail){ recent = recent.filter(o=> (o.email||'').toLowerCase() === selectedEmail.toLowerCase()); }
+      recent = recent.slice(-10).reverse();
       listEl.innerHTML = recent.map(o=> `<li data-val="${escapeHtml(String(o.id))}"><strong>${escapeHtml(String(o.id))}</strong> — ${escapeHtml(o.name||'')} <span class="muted">${escapeHtml(o.email||'')}</span></li>`).join('');
       listEl.style.display = recent.length ? 'block' : 'none';
     } else {
@@ -468,8 +528,14 @@ function wireOrderSearch(){
   listEl.addEventListener('click', (e)=>{
     const li = e.target.closest('li');
     if(!li) return;
-    selectedOrderNo = li.dataset.val || '';
-    input.value = selectedOrderNo;
+    const chosen = li.dataset.val || '';
+    if(chosen && !selectedOrderIds.includes(chosen)){
+      selectedOrderIds.push(chosen);
+      addChip('ct-order-selected', chosen, ()=>{
+        selectedOrderIds = selectedOrderIds.filter(x=> x!==chosen);
+      });
+    }
+    input.value = '';
     listEl.style.display = 'none';
   });
   // click outside to close
@@ -478,13 +544,15 @@ function wireOrderSearch(){
   });
 }
 
-function wireShipSearch(){
+function wireShipMulti(){
   const input = document.getElementById('ct-ship-search');
   const listEl = document.getElementById('ct-ship-results');
   if(!input || !listEl) return;
   const makeItems = (term)=>{
     const termL = term.toLowerCase();
-    const items = (state.shippingRequests||[]).filter(r=>{
+    let base = (state.shippingRequests||[]);
+    if(selectedEmail){ base = base.filter(r=> (r.email||'').toLowerCase() === selectedEmail.toLowerCase()); }
+    const items = base.filter(r=>{
       const hay = [r.id,r.trackingNumber,r.orderId,r.email,r.name,r.status,r.product].join(' ').toLowerCase();
       return hay.includes(termL);
     }).slice(0,10);
@@ -494,7 +562,9 @@ function wireShipSearch(){
   // toggle open on click; render recent on first open
   input.addEventListener('click', ()=>{
     if(listEl.style.display === 'none' || !listEl.style.display){
-      const recent = [...(state.shippingRequests||[])].slice(-10).reverse();
+      let recent = [...(state.shippingRequests||[])];
+      if(selectedEmail){ recent = recent.filter(r=> (r.email||'').toLowerCase() === selectedEmail.toLowerCase()); }
+      recent = recent.slice(-10).reverse();
       listEl.innerHTML = recent.map(r=> `<li data-val="${escapeHtml(String(r.trackingNumber||r.id||''))}"><strong>${escapeHtml(String(r.trackingNumber||r.id||''))}</strong> — ${escapeHtml(r.status||'')} <span class="muted">${escapeHtml(r.email||'')}</span></li>`).join('');
       listEl.style.display = recent.length ? 'block' : 'none';
     } else {
@@ -509,14 +579,102 @@ function wireShipSearch(){
   listEl.addEventListener('click', (e)=>{
     const li = e.target.closest('li');
     if(!li) return;
-    selectedShipNo = li.dataset.val || '';
-    input.value = selectedShipNo;
+    const chosen = li.dataset.val || '';
+    if(chosen && !selectedShipmentIds.includes(chosen)){
+      selectedShipmentIds.push(chosen);
+      addChip('ct-ship-selected', chosen, ()=>{
+        selectedShipmentIds = selectedShipmentIds.filter(x=> x!==chosen);
+      });
+    }
+    input.value = '';
     listEl.style.display = 'none';
   });
   // click outside to close
   document.addEventListener('click', (ev)=>{
     if(!ev.target.closest('.search-dropdown')){ listEl.style.display = 'none'; }
   });
+}
+
+function wireConvMulti(){
+  const input = document.getElementById('ct-conv-search');
+  const listEl = document.getElementById('ct-conv-results');
+  if(!input || !listEl) return;
+  const makeItems = (term)=>{
+    const termL = term.toLowerCase();
+    let base = (state.emailConversations||[]);
+    if(selectedEmail){ base = base.filter(c=> (c.email||'').toLowerCase() === selectedEmail.toLowerCase()); }
+    const items = base.filter(c=>{
+      const hay = [c.id,c.conversation_id,c.threadId,c.email,c.name].join(' ').toLowerCase();
+      return hay.includes(termL);
+    }).slice(0,10);
+    listEl.innerHTML = items.map(c=> {
+      const id = c.id || c.conversation_id || c.threadId || c.email;
+      return `<li data-val="${escapeHtml(String(id))}"><strong>${escapeHtml(String(id))}</strong> — ${escapeHtml(c.name||'')} <span class="muted">${escapeHtml(c.email||'')}</span></li>`;
+    }).join('');
+    listEl.style.display = items.length ? 'block' : 'none';
+  };
+  input.addEventListener('click', ()=>{
+    if(listEl.style.display === 'none' || !listEl.style.display){
+      let recent = [...(state.emailConversations||[])];
+      if(selectedEmail){ recent = recent.filter(c=> (c.email||'').toLowerCase() === selectedEmail.toLowerCase()); }
+      recent = recent.slice(-10).reverse();
+      listEl.innerHTML = recent.map(c=> {
+        const id = c.id || c.conversation_id || c.threadId || c.email;
+        return `<li data-val="${escapeHtml(String(id))}"><strong>${escapeHtml(String(id))}</strong> — ${escapeHtml(c.name||'')} <span class="muted">${escapeHtml(c.email||'')}</span></li>`;
+      }).join('');
+      listEl.style.display = recent.length ? 'block' : 'none';
+    } else { listEl.style.display = 'none'; }
+  });
+  input.addEventListener('input', ()=>{ if(listEl.style.display !== 'block') listEl.style.display='block'; makeItems(input.value); });
+  listEl.addEventListener('click', (e)=>{
+    const li = e.target.closest('li'); if(!li) return;
+    const chosen = li.dataset.val || '';
+    if(chosen && !selectedConversationIds.includes(chosen)){
+      selectedConversationIds.push(chosen);
+      addChip('ct-conv-selected', chosen, ()=>{ selectedConversationIds = selectedConversationIds.filter(x=> x!==chosen); });
+    }
+    input.value = '';
+    listEl.style.display = 'none';
+  });
+  document.addEventListener('click', (ev)=>{ if(!ev.target.closest('.search-dropdown')) listEl.style.display = 'none'; });
+}
+
+function wireTicketMulti(){
+  const input = document.getElementById('ct-tick-search');
+  const listEl = document.getElementById('ct-tick-results');
+  if(!input || !listEl) return;
+  const makeItems = (term)=>{
+    const termL = term.toLowerCase();
+    let base = (state.tickets||[]);
+    if(selectedEmail){ base = base.filter(t=> (t.email||'').toLowerCase() === selectedEmail.toLowerCase()); }
+    const items = base.filter(t=>{
+      const hay = [t.id,t.customer,t.email,t.orderNo,t.shippingNo,t.status,t.priority].join(' ').toLowerCase();
+      return hay.includes(termL);
+    }).slice(0,10);
+    listEl.innerHTML = items.map(t=> `<li data-val="${escapeHtml(String(t.id))}"><strong>${escapeHtml(String(t.id))}</strong> — ${escapeHtml(t.customer||'')} <span class="muted">${escapeHtml(t.email||'')}</span></li>`).join('');
+    listEl.style.display = items.length ? 'block' : 'none';
+  };
+  input.addEventListener('click', ()=>{
+    if(listEl.style.display === 'none' || !listEl.style.display){
+      let recent = [...(state.tickets||[])];
+      if(selectedEmail){ recent = recent.filter(t=> (t.email||'').toLowerCase() === selectedEmail.toLowerCase()); }
+      recent = recent.slice(-10).reverse();
+      listEl.innerHTML = recent.map(t=> `<li data-val="${escapeHtml(String(t.id))}"><strong>${escapeHtml(String(t.id))}</strong> — ${escapeHtml(t.customer||'')} <span class="muted">${escapeHtml(t.email||'')}</span></li>`).join('');
+      listEl.style.display = recent.length ? 'block' : 'none';
+    } else { listEl.style.display = 'none'; }
+  });
+  input.addEventListener('input', ()=>{ if(listEl.style.display !== 'block') listEl.style.display='block'; makeItems(input.value); });
+  listEl.addEventListener('click', (e)=>{
+    const li = e.target.closest('li'); if(!li) return;
+    const chosen = li.dataset.val || '';
+    if(chosen && !selectedTicketIds.includes(chosen)){
+      selectedTicketIds.push(chosen);
+      addChip('ct-tick-selected', chosen, ()=>{ selectedTicketIds = selectedTicketIds.filter(x=> x!==chosen); });
+    }
+    input.value = '';
+    listEl.style.display = 'none';
+  });
+  document.addEventListener('click', (ev)=>{ if(!ev.target.closest('.search-dropdown')) listEl.style.display = 'none'; });
 }
 
 function wireNameDropdown(){
@@ -555,6 +713,11 @@ function wireNameDropdown(){
     const emailInput = document.getElementById('ct-email');
     const paired = li.dataset.email || '';
     if(emailInput && paired && !emailInput.value){ emailInput.value = paired; selectedEmail = paired; }
+    // Refresh other dropdowns filtered by email
+    document.getElementById('ct-order-results')?.style.setProperty('display','none');
+    document.getElementById('ct-ship-results')?.style.setProperty('display','none');
+    document.getElementById('ct-conv-results')?.style.setProperty('display','none');
+    document.getElementById('ct-tick-results')?.style.setProperty('display','none');
     listEl.style.display = 'none';
   });
   // close on outside click
@@ -593,6 +756,15 @@ function wireEmailDropdown(){
       const match = (state.emailConversations||[]).find(c=> (c.email||'')===selectedEmail);
       if(match && match.name){ nameInput.value = match.name; selectedName = match.name; }
     }
+    // Reset selections filtered by email context
+    selectedOrderIds = [];
+    selectedShipmentIds = [];
+    selectedConversationIds = [];
+    selectedTicketIds = [];
+    document.getElementById('ct-order-selected')?.replaceChildren();
+    document.getElementById('ct-ship-selected')?.replaceChildren();
+    document.getElementById('ct-conv-selected')?.replaceChildren();
+    document.getElementById('ct-tick-selected')?.replaceChildren();
     listEl.style.display = 'none';
   });
   // close on outside click
@@ -620,15 +792,22 @@ async function onSubmitCreateTicket(){
   const btn = document.getElementById('ct-submit');
   const name = (document.getElementById('ct-name')?.value||'').trim();
   const email = (document.getElementById('ct-email')?.value||'').trim();
+  const phone = (document.getElementById('ct-phone')?.value||'').trim();
+  const status = 'open';
+  const priority = (document.getElementById('ct-priority')?.value||'normal').trim();
+  const category = (document.getElementById('ct-category')?.value||'').trim();
+  const sourceChannel = (document.getElementById('ct-source')?.value||'email').trim();
   // Always generate the next ticket ID in VEL-000001 format
   const idInput = document.getElementById('ct-ticket-id');
   const ticketId = computeNextTicketId();
   if(idInput){ idInput.value = ticketId; }
-  const orderNo = (document.getElementById('ct-order-search')?.value||selectedOrderNo||'').trim();
-  const shipNo = (document.getElementById('ct-ship-search')?.value||selectedShipNo||'').trim();
+  const orderIds = [...selectedOrderIds];
+  const shipIds = [...selectedShipmentIds];
+  const convIds = [...selectedConversationIds];
+  const tickIds = [...selectedTicketIds];
 
-  if(!name || !email || !ticketId){
-    alert('Please fill Name, Email and Ticket ID.');
+  if(!email || !ticketId){
+    alert('Please fill Email (and Ticket ID will auto-generate).');
     return;
   }
 
@@ -636,15 +815,35 @@ async function onSubmitCreateTicket(){
     business_id: BUSINESS_ID,
     Name: name,
     Email: email,
+    Phone: phone,
     Ticket_id: ticketId,
-    Order_no: orderNo,
-    Shipping_no: shipNo
+    Status: status,
+    Priority: priority,
+    Category: category,
+    SourceChannel: sourceChannel,
+    // Send arrays of JSON objects for linked references as requested
+    linkedOrders: orderIds.map(id=> ({ orderId: id })),
+    linkedShipments: shipIds.map(id=> ({ shipmentId: id })),
+    linkedConversations: convIds.map(id=> ({ conversationId: id })),
+    linkedTickets: tickIds.map(id=> ({ ticketId: id }))
   };
 
   // Optimistically create a local ticket and store to localStorage
   const pending = normalizeTicket({
-    id: ticketId, status:'open', priority:'normal', title:'', Name: name, Email: email,
-    Order_no: orderNo, Shipping_no: shipNo, createdAt: Date.now(), updatedAt: Date.now()
+    id: ticketId,
+    status,
+    priority,
+    title:'',
+    Name: name,
+    Email: email,
+    Phone: phone,
+    Category: category,
+    SourceChannel: sourceChannel,
+    linkedOrders: orderIds,
+    linkedShipments: shipIds,
+    linkedConversations: convIds,
+    linkedTickets: tickIds,
+    createdAt: Date.now(), updatedAt: Date.now()
   });
   // Mark as local (not rendered, but useful internally)
   pending._local = true;
