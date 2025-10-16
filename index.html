@@ -39,6 +39,7 @@
                     <div class="tickets-controls" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
                         <div class="tickets-stats" id="tickets-stats" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
                         <div style="flex:1"></div>
+                        <button id="refresh-tickets" class="mini-btn" title="Refresh tickets"><i class="fas fa-rotate-right"></i> Refresh</button>
                         <button id="create-ticket" class="primary-action">Create Ticket</button>
                     </div>
                 </div>
@@ -58,6 +59,7 @@
                     <h2>Order History</h2>
                     <div class="order-history-controls">
                         <input type="text" id="order-search" placeholder="Search orders..." />
+                        <button id="refresh-order-history" class="mini-btn" title="Refresh orders"><i class="fas fa-rotate-right"></i> Refresh</button>
                         <button id="create-shipping-request" class="primary-action">Create Shipping Request</button>
                         <div id="order-source-indicator" style="margin-left:12px;font-size:0.85rem;"></div>
                     </div>
@@ -69,7 +71,7 @@
             <section id="view-shipping-requests" class="app-view" hidden>
                 <div class="view-header">
                     <h2>Shipping Requests</h2>
-                    <div class="shipping-requests-filters">
+                    <div class="shipping-requests-filters" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                         <input type="text" id="shipping-search" placeholder="Search shipping requests..." />
                         <select id="shipping-status-filter">
                             <option value="">All Statuses</option>
@@ -78,6 +80,8 @@
                             <option value="delivered">Delivered</option>
                             <option value="cancelled">Cancelled</option>
                         </select>
+                        <div style="flex:1"></div>
+                        <button id="refresh-shipping-requests" class="mini-btn" title="Refresh shipping requests"><i class="fas fa-rotate-right"></i> Refresh</button>
                     </div>
                     <div class="shipping-stats" id="shipping-stats"></div>
                 </div>
@@ -90,6 +94,9 @@
                     <div id="cs-sub-bar" class="cs-sub-bar-shell">
                         <button type="button" class="cs-sub-btn active cs-sub-btn-flex" data-cs="email">EMAIL</button>
                         <button type="button" class="cs-sub-btn cs-sub-btn-flex" data-cs="crm">CRM</button>
+                    </div>
+                    <div style="display:flex; width:100%; justify-content:flex-end; margin:6px 0 0;">
+                        <button id="refresh-customer-support" class="mini-btn" title="Refresh conversations"><i class="fas fa-rotate-right"></i> Refresh</button>
                     </div>
                     <div id="email-stats-bar" class="mini-stats-row">
                         <div class="mini-stat" data-stat="total">

@@ -5,6 +5,7 @@ import { loadOrders, attachOrderHistoryHandlers } from '../views/orderHistoryVie
 import { initShippingRequestsView } from '../views/shippingRequestsView.js';
 import { showLoader, hideLoader, withButtonLoader } from '../utils/loader.js';
 import { initTicketsView } from '../views/ticketsView.js';
+import { loadShippingRequests } from '../views/shippingRequestsView.js';
 
 function isoRange(fromDate, toDate){
   return [fromDate + 'T00:00:00Z', toDate + 'T23:59:59Z'];
@@ -99,12 +100,54 @@ function bindFilters(){
   }
 }
 
+function bindRefreshButtons(){
+  const ordersBtn = document.getElementById('refresh-order-history');
+  if(ordersBtn){
+    ordersBtn.addEventListener('click', async ()=>{
+      const section = document.getElementById('view-order-history');
+      showLoader(section, 'overlay');
+      try { await loadOrders({ retry: true }); } finally { hideLoader(section, 'overlay'); }
+    });
+  }
+
+  const shipBtn = document.getElementById('refresh-shipping-requests');
+  if(shipBtn){
+    shipBtn.addEventListener('click', async ()=>{
+      const section = document.getElementById('view-shipping-requests');
+      showLoader(section, 'overlay');
+      try { await loadShippingRequests({ force: true }); } finally { hideLoader(section, 'overlay'); }
+    });
+  }
+
+  const csBtn = document.getElementById('refresh-customer-support');
+  if(csBtn){
+    csBtn.addEventListener('click', async ()=>{
+      const section = document.getElementById('view-customer-support');
+      showLoader(section, 'overlay');
+      try { await loadCustomerSupport(); } finally { hideLoader(section, 'overlay'); }
+    });
+  }
+
+  const ticketsBtn = document.getElementById('refresh-tickets');
+  if(ticketsBtn){
+    ticketsBtn.addEventListener('click', async ()=>{
+      const section = document.getElementById('view-tickets');
+      showLoader(section, 'overlay');
+      try {
+        const mod = await import('../views/ticketsView.js');
+        await mod.reloadTickets();
+      } finally { hideLoader(section, 'overlay'); }
+    });
+  }
+}
+
 export async function initApp(){
   bindNav();
   attachConversationListHandlers();
   attachOrderHistoryHandlers();
   bindCustomerSupportSubNav();
   bindFilters();
+  bindRefreshButtons();
 
   // Fire all initial data loads without blocking UI so tab switching remains responsive
   // Start fetches for all four tabs in the background

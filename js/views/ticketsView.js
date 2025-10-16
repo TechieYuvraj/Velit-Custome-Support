@@ -95,8 +95,8 @@ export async function initTicketsView(){
   renderTicketsList();
 }
 
-export async function loadTickets(){
-  if(initialized) return;
+export async function loadTickets({ force=false }={}){
+  if(initialized && !force) return;
   try {
     const data = await api.fetchTickets();
     // Support Firestore list shape { documents: [...] } or single object
@@ -114,6 +114,14 @@ export async function loadTickets(){
   } finally {
     initialized = true;
   }
+}
+
+export async function reloadTickets(){
+  // Clear init guard and fetch fresh
+  initialized = false;
+  await loadTickets({ force: true });
+  renderTicketsStats();
+  renderTicketsList();
 }
 
 function normalizeTicket(t){

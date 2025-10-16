@@ -14,10 +14,10 @@ function ensureSubscribed(){
   });
 }
 
-export async function loadShippingRequests(){
-  if(initialized) {
+export async function loadShippingRequests({ force=false }={}){
+  if(initialized && !force) {
     console.log('Shipping requests already initialized, skipping fetch');
-    return; // fetch only once for now
+    return; // fetch only once for now unless forced
   }
   try {
     const sessionId = buildSessionId();
