@@ -14,7 +14,8 @@ export const ENDPOINTS = {
   orderHistory: `${BASE_URL}/FetchOrderHistory`,
   shipmentStatus: `${BASE_URL}/ShipmentStatus`,
   ticketsFetch: `${BASE_URL}/fetchTickets`,
-  ticketsCreate: `${BASE_URL}/ticketcreation`
+  ticketsCreate: `${BASE_URL}/ticketcreation`,
+  ticketsUpdate: `${BASE_URL}/updatetickets`
 };
 
 export const BUSINESS_ID = 'velit-camping-2027';

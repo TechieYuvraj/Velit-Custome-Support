@@ -51,5 +51,6 @@ export const api = {
   fetchShippingRequests: (sessionId, chatInput='ShippingRequests') => request(ENDPOINTS.labelHistory, { body: { chatInput, sessionId } }),
   updateShipmentStatus: (payload) => request(ENDPOINTS.shipmentStatus, { body: payload }),
   fetchTickets: () => request(ENDPOINTS.ticketsFetch, { body: { chatInput: 'FetchTickets' } }),
-  createTicket: (payload) => request(ENDPOINTS.ticketsCreate, { body: payload })
+  createTicket: (payload) => request(ENDPOINTS.ticketsCreate, { body: payload }),
+  updateTicket: (payload) => request(ENDPOINTS.ticketsUpdate, { body: payload })
 };

@@ -245,9 +245,18 @@ export function renderTicketsList(){
 
 function ticketRow(t){
   return `<div class="ticket-item" data-ticket-id="${escapeHtml(t.id)}">
-    <div class="ti-main">
-      <div class="ti-title"><strong>${escapeHtml(t.id)}</strong> — ${escapeHtml(t.title||'')}</div>
-      <div class="ti-meta"><span class="badge ${t.status}">${escapeHtml(labelize(t.status))}</span> • Updated ${escapeHtml(formatDate(t.updatedAt))}</div>
+    <div class="ti-main" style="display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:8px">
+      <div class="ti-left" style="display:flex;flex-direction:column;gap:6px;min-width:0">
+        <div class="ti-title"><strong>${escapeHtml(t.id)}</strong> — ${escapeHtml(t.title||'')}</div>
+        <div class="ti-meta">
+          <span class="badge ${t.status}">${escapeHtml(labelize(t.status))}</span>
+          <span class="badge ${t.priority}">${escapeHtml(labelize(t.priority))}</span>
+        </div>
+      </div>
+      <div class="ti-right" style="text-align:right;min-width:160px">
+        <div class="ti-time" style="font-size:.7rem;color:#58786f">Created ${escapeHtml(formatDate(t.createdAt))}</div>
+        <div class="ti-time" style="font-size:.7rem;color:#58786f">Updated ${escapeHtml(formatDate(t.updatedAt))}</div>
+      </div>
     </div>
   </div>`;
 }
@@ -276,6 +285,9 @@ export function renderTicketDetail(ticket){
         </div>
         <div class="th-right">
           <div class="th-customer"><strong>${escapeHtml(ticket.customer||'')}</strong><br><span class="email">${escapeHtml(ticket.email||'')}</span></div>
+          <div class="th-actions" style="margin-top:6px;text-align:right">
+            <button class="btn-primary" id="update-ticket-btn" style="padding:6px 10px;font-size:.75rem">Update Ticket</button>
+          </div>
         </div>
       </div>
       <div class="ticket-body">
@@ -284,6 +296,7 @@ export function renderTicketDetail(ticket){
     </div>
   `;
   bindNuggetClicks();
+  document.getElementById('update-ticket-btn')?.addEventListener('click', ()=> openUpdateTicketModal(ticket));
 }
 
 function computeLinked(ticket){
@@ -1027,4 +1040,102 @@ async function onSubmitCreateTicket(){
       alert('Ticket saved locally. Will sync when online.');
     }
   }, 'Creating...');
+}
+
+// ===== Update Ticket Modal =====
+function ensureUpdateTicketModal(){
+  if(document.getElementById('update-ticket-modal')) return;
+  const html = `
+    <div id="update-ticket-modal" class="modal-overlay" style="display:none;">
+      <div class="modal-content" style="max-width:620px;">
+        <div class="modal-header">
+          <h3>Update Ticket</h3>
+          <button class="modal-close" onclick="closeUpdateTicketModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group"><label>Ticket ID</label><input id="ut-ticket-id" class="form-control" readonly /></div>
+          <div class="form-row" style="display:flex;gap:10px;">
+            <div class="form-group" style="flex:1">
+              <label>Status</label>
+              <select id="ut-status" class="form-control">
+                <option value="open">Open</option>
+                <option value="closed">Closed</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex:1">
+              <label>Priority</label>
+              <select id="ut-priority" class="form-control">
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group"><label>Title</label><input id="ut-title" class="form-control" placeholder="Subject or title" /></div>
+          <div class="form-group"><label>Name</label><input id="ut-name" class="form-control" /></div>
+          <div class="form-group"><label>Email</label><input id="ut-email" class="form-control" /></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeUpdateTicketModal()">Cancel</button>
+          <button id="ut-submit" class="btn-primary">Update</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+  document.getElementById('ut-submit')?.addEventListener('click', onSubmitUpdateTicket);
+}
+
+export function openUpdateTicketModal(ticket){
+  ensureUpdateTicketModal();
+  const modal = document.getElementById('update-ticket-modal');
+  if(!modal) return;
+  // Prefill
+  document.getElementById('ut-ticket-id').value = ticket.id || '';
+  document.getElementById('ut-status').value = (ticket.status||'open');
+  document.getElementById('ut-priority').value = (ticket.priority||'normal');
+  document.getElementById('ut-title').value = ticket.title || '';
+  document.getElementById('ut-name').value = ticket.customer || ticket.name || '';
+  document.getElementById('ut-email').value = ticket.email || '';
+  modal.style.display = 'flex';
+}
+
+window.closeUpdateTicketModal = function(){
+  const modal = document.getElementById('update-ticket-modal');
+  if(modal){ modal.style.display='none'; }
+};
+
+async function onSubmitUpdateTicket(){
+  const btn = document.getElementById('ut-submit');
+  const id = (document.getElementById('ut-ticket-id')?.value||'').trim();
+  const status = (document.getElementById('ut-status')?.value||'open').trim();
+  const priority = (document.getElementById('ut-priority')?.value||'normal').trim();
+  const title = (document.getElementById('ut-title')?.value||'').trim();
+  const name = (document.getElementById('ut-name')?.value||'').trim();
+  const email = (document.getElementById('ut-email')?.value||'').trim();
+
+  if(!id){ alert('Missing Ticket ID'); return; }
+
+  const payload = {
+    Ticket_id: id,
+    Status: status,
+    Priority: priority,
+    Subject: title,
+    Name: name,
+    Email: email
+  };
+
+  await withButtonLoader(btn, async ()=>{
+    try{
+      await api.updateTicket(payload);
+      // Update local state
+      updateArray('tickets', list=> list.map(t=> t.id===id ? { ...t, status, priority, title, customer: name || t.customer, email: email || t.email, updatedAt: Date.now() } : t));
+      // If currently selected, refresh detail
+      const sel = state.selectedTicket && state.selectedTicket.id === id ? { ...state.selectedTicket, status, priority, title, customer: name || state.selectedTicket.customer, email: email || state.selectedTicket.email, updatedAt: Date.now() } : null;
+      if(sel){ setState({ selectedTicket: sel }); }
+      closeUpdateTicketModal();
+    }catch(e){
+      console.error('Failed to update ticket', e);
+      alert('Failed to update ticket.');
+    }
+  }, 'Updating...');
 }
