@@ -74,11 +74,41 @@ function buildSessionId(){
 
 function normalizeRequest(r){
   if(!r || typeof r !== 'object') return null;
-  // New shape sample:
-  // { Product, Status, trackingNumber, requestId, orderId, url, Email, Name }
+  // Support Firestore document shape from LabelHistory webhook
+  if(r.document && r.document.fields){
+    const doc = r.document;
+    const f = doc.fields || {};
+    const val = (node)=>{
+      if(!node || typeof node !== 'object') return undefined;
+      if('stringValue' in node) return node.stringValue;
+      if('integerValue' in node) return String(node.integerValue);
+      if('doubleValue' in node) return String(node.doubleValue);
+      if('booleanValue' in node) return node.booleanValue;
+      if('timestampValue' in node){ try { return new Date(node.timestampValue).toISOString(); } catch { return undefined; } }
+      if('nullValue' in node) return null;
+      return undefined;
+    };
+    const createdAtStr = val(f.createdAt) || doc.createTime;
+    const updatedAtStr = val(f.updatedAt) || doc.updateTime;
+    const base = {
+      Product: val(f.Product),
+      Status: val(f.Status),
+      trackingNumber: val(f.trackingNumber),
+      requestId: val(f.requestId),
+      orderId: val(f.orderId),
+      url: val(f.url),
+      Email: val(f.Email),
+      Name: val(f.Name),
+      Note: val(f.Note),
+      createdAt: createdAtStr,
+      updatedAt: updatedAtStr
+    };
+    r = base;
+  }
+  // Map to flat model
   const status = (r.Status || r.status || 'pending').toString().trim().toLowerCase().replace(/\s+/g,'_');
-  // Parse date string if provided (e.g., '2025-10-13'); no fallback to Date.now()
-  const createdAt = r.Time || r.createdAt || r.created_at || (r.Date ? Date.parse(r.Date) : undefined);
+  const createdAt = r.createdAt ? Date.parse(r.createdAt) : (r.Date ? Date.parse(r.Date) : undefined);
+  const updatedAt = r.updatedAt ? Date.parse(r.updatedAt) : undefined;
   return {
     id: r.requestId || r.trackingNumber || r.orderId || `REQ-${Math.random().toString(36).slice(2,8)}`,
     product: r.Product || r.product || '',
@@ -90,7 +120,8 @@ function normalizeRequest(r){
     email: r.Email || r.email || '',
     name: r.Name || r.shipping_name || r['Shipping Name'] || r.name || '',
     note: r.Note || r.note || '',
-    createdAt
+    createdAt,
+    updatedAt
   };
 }
 
@@ -144,7 +175,7 @@ function cardHtml(r){
       ${r.url ? `<button class="mini-btn" onclick="window.open('${r.url}','_blank')">Label</button>`:''}
       <button class="mini-btn update-status-btn" data-request-id="${r.id}" onclick="openUpdateStatusModal('${r.id}')">Update Shipment Status</button>
     </div>
-    <div class="sr-footer"><small>${formatDate(r.createdAt)}</small></div>
+    <div class="sr-footer"><small>Created: ${formatDate(r.createdAt)}${r.updatedAt?` • Updated: ${formatDate(r.updatedAt)}`:''}</small></div>
   </div>`;
 }
 
