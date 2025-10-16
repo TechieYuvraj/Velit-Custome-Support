@@ -54,7 +54,7 @@ export function openShipRequestModal(prefillOrder){
         <div class="form-row"><label>Height:</label><input type="number" id="sr-height" min="1" /></div>
         <div class="form-row"><label>Weight:</label><input type="number" id="sr-weight" min="1" /></div>
 
-        <div class="form-row"><label>Notes:</label><textarea id="sr-notes" rows="2" placeholder="Optional internal notes..."></textarea></div>
+  <div class="form-row"><label>Note:</label><textarea id="sr-note" rows="2" placeholder="Optional note to include with the request..."></textarea></div>
         <div class="form-actions" style="margin-top:14px;display:flex;gap:12px;align-items:center;">
           <button type="submit" id="sr-submit" class="primary-action">Submit Request</button>
           <span id="sr-status-msg" style="font-size:13px;color:#555;"></span>
@@ -110,7 +110,7 @@ async function handleSubmit(e){
   const email = document.getElementById('sr-email').value.trim();
   const prodKey = document.getElementById('sr-product-dim').value.trim();
   const fromKey = document.getElementById('sr-from-address').value.trim();
-  const notes = document.getElementById('sr-notes').value.trim();
+  const note = document.getElementById('sr-note').value.trim();
   statusMsg.textContent='';
 
   // Prevent duplicate shipping requests for same order
@@ -176,6 +176,7 @@ async function handleSubmit(e){
     channel: 'NJF',
     signature: 'NO_SIGNATURE_REQUIRED',
     reference: 'ref-example',
+    note,
     from,
     to,
     packages: [pkg]
@@ -186,16 +187,17 @@ async function handleSubmit(e){
       product: prodKey,
       orderId: order_no,
       Name: to.fullName || '',
-      Email: email
+      Email: email,
+      note
     };
     await api.createShippingLabel(payload, meta); // ignoring response per spec
     statusMsg.innerHTML = '<span style="color:#195744;font-weight:600;">Request queued. Appears live in list in ~40s.</span>';
     const placeholderId = `pending-${Date.now()}`;
     const createdAt = Date.now();
     const etaMs = 40000;
-  const tempItem = { id: placeholderId, orderNo: order_no, email, name: to.fullName || '', status:'pending', createdAt, address:'', product: prodKey, from, pkg, _etaExpires: createdAt + etaMs };
+    const tempItem = { id: placeholderId, orderId: order_no, email, name: to.fullName || '', status:'pending', createdAt, address:'', product: prodKey, from, pkg, note, _etaExpires: createdAt + etaMs };
     updateArray('shippingRequests', arr=> [tempItem, ...arr]);
-  scheduleDelayedInsert({ order_no, email, product_dimensions: prodKey, from_address: fromKey, from, pkg, created_at: new Date().toISOString() }, placeholderId);
+    scheduleDelayedInsert({ order_no, email, product_dimensions: prodKey, from_address: fromKey, from, pkg, created_at: new Date().toISOString(), note }, placeholderId);
   } catch(err){
     statusMsg.innerHTML = '<span style="color:#b00020;">Failed to submit.</span>';
   } finally {
@@ -207,7 +209,7 @@ function scheduleDelayedInsert(item, placeholderId){
   setTimeout(()=>{
     updateArray('shippingRequests', arr=> {
       const filtered = arr.filter(r=> r.id !== placeholderId);
-      const normalized = { id: item.order_no || `REQ-${Date.now()}`, orderNo: item.order_no, email: item.email, status:'open', createdAt: Date.now(), address:'', name:'', product: item.product_dimensions, from: item.from, pkg: item.pkg };
+      const normalized = { id: item.order_no || `REQ-${Date.now()}`, orderId: item.order_no, email: item.email, status:'open', createdAt: Date.now(), address:'', name:'', product: item.product_dimensions, from: item.from, pkg: item.pkg, note: item.note };
       return [normalized, ...filtered];
     });
   }, 40000); // 40s

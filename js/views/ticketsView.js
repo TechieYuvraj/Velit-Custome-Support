@@ -459,8 +459,62 @@ function openLinkedDetailModal(type, id){
   const titleEl = modal.querySelector('#linked-modal-title');
   const bodyEl = modal.querySelector('#linked-modal-body');
   titleEl.textContent = `${type[0].toUpperCase()+type.slice(1)} ${id}`;
-  bodyEl.innerHTML = renderLinkedDetail(type, id);
+  if(type === 'conversation'){
+    // Show loader while fetching messages
+    bodyEl.innerHTML = `<div style="padding:12px;color:#567;">Loading messages...</div>`;
+    // Fetch messages and render
+    fetchAndRenderConversationDetail(id, bodyEl);
+  } else {
+    bodyEl.innerHTML = renderLinkedDetail(type, id);
+  }
   modal.style.display = 'flex';
+}
+
+async function fetchAndRenderConversationDetail(convId, hostEl){
+  try{
+    // Try to enrich header from any known conversation in state
+    const conv = (state.emailConversations||[]).find(c=> String(c.id||c.conversation_id||c.threadId||c.email)===String(convId));
+    const headerHtml = conv ? `
+      <div style="margin-bottom:10px;border-bottom:1px solid #e6efec;padding-bottom:8px;">
+        <div style="font-weight:600;">${escapeHtml(conv.subject||'Conversation')}</div>
+        <div style="font-size:12px;color:#567;">${escapeHtml(conv.name||'')} • ${escapeHtml(conv.email||'')}</div>
+      </div>` : '';
+
+    const res = await api.fetchMessages(convId);
+    const messages = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
+    const content = messages && messages.length ? conversationMessagesHtml(messages) : '<div style="color:#888;">No messages found.</div>';
+    hostEl.innerHTML = `${headerHtml}<div class="messages-container" style="max-height:60vh;overflow:auto;display:flex;flex-direction:column;gap:10px;">${content}</div>`;
+  }catch(e){
+    console.warn('Failed to fetch conversation messages', e);
+    hostEl.innerHTML = '<div style="color:#b00020;">Failed to load messages.</div>';
+  }
+}
+
+function conversationMessagesHtml(msgs){
+  // Sort oldest to newest
+  const arr = [...msgs].sort((a,b)=>{
+    const ta = Date.parse(a.timestamp?.timestampValue || a.timestamp?.stringValue || a.timestamp || 0) || 0;
+    const tb = Date.parse(b.timestamp?.timestampValue || b.timestamp?.stringValue || b.timestamp || 0) || 0;
+    return ta - tb;
+  });
+  return arr.map(m=>{
+    const sender = m.sender?.stringValue || m.sender || '';
+    const message = m.decodedMessage || m.message?.stringValue || m.message || '';
+    const ts = m.timestamp?.timestampValue || m.timestamp?.stringValue || m.timestamp || '';
+    const when = formatDate(ts);
+    const isUser = (sender==='user' || sender==='customer');
+    const align = isUser ? 'flex-start' : 'flex-end';
+    const bubbleColor = isUser ? '#eef6f4' : '#195744';
+    const textColor = isUser ? '#194b3b' : '#fff';
+    const safeMsg = escapeHtml(String(message)).replace(/\n/g,'<br>');
+    return `<div style="display:flex;justify-content:${align};">
+      <div style="max-width:80%;background:${bubbleColor};color:${textColor};padding:8px 10px;border-radius:10px;">
+        <div style="font-size:12px;opacity:.8;margin-bottom:4px;">${escapeHtml(sender||'')}</div>
+        <div>${safeMsg}</div>
+        <div style="font-size:10px;opacity:.7;margin-top:6px;text-align:right;">${escapeHtml(when)}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function renderLinkedDetail(type, id){
