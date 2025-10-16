@@ -134,7 +134,7 @@ async function handleSubmit(e){
     city: val('sr-to-city'),
     state: val('sr-to-state'),
     country: val('sr-to-country'),
-    extension: val('sr-to-address2'),
+    address2: val('sr-to-address2'),
     phoneNumber: val('sr-to-phone')
   };
   const pkg = {
@@ -156,11 +156,13 @@ async function handleSubmit(e){
     const rnd = Math.floor(Math.random() * 900 + 100);
     return `${dd}${mm}${yyyy}${hh}${min}${ss}${ms}${dd}${rnd}`;
   }
-  const shipDate = new Date().toISOString().split('T')[0];
+  const createdAtIso = new Date().toISOString();
+  const shipDate = createdAtIso.split('T')[0];
   const requestId = generateRequestId();
   const payload = [{
     requestId,
     shipDate,
+    createdAt: createdAtIso,
     serviceType: 'FEDEX_GROUND',
     channel: 'NJF',
     signature: 'NO_SIGNATURE_REQUIRED',
@@ -171,7 +173,7 @@ async function handleSubmit(e){
   }];
   try {
     const meta = {
-      date: shipDate,
+      date: createdAtIso,
       product: prodKey,
       orderId: order_no,
       Name: to.fullName || '',

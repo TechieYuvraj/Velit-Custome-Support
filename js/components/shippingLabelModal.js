@@ -86,9 +86,9 @@ export async function openShippingLabelModal(email, orders = []){
     try {
       const Name = document.getElementById('modal-shipping-name')?.value || '';
       const EmailAddr = document.getElementById('modal-shipping-email')?.value || '';
-      const product = document.getElementById('modal-product-dimensions')?.value || '';
-      const today = new Date().toISOString().split('T')[0];
-      const meta = { date: today, product, orderId: orderNo, Name, Email: EmailAddr };
+  const product = document.getElementById('modal-product-dimensions')?.value || '';
+  const createdAtIso = new Date().toISOString();
+  const meta = { date: createdAtIso, product, orderId: orderNo, Name, Email: EmailAddr };
       await api.createShippingLabel(payload, meta);
       respDiv.innerHTML='<div style="color:#195744;font-weight:600;">Submitted.</div><pre style="margin-top:6px;background:#f5f5f5;padding:8px;border-radius:6px;max-height:140px;overflow:auto;font-size:11px;">'+escapeHtml(JSON.stringify(payload,null,2))+'</pre>';
     } catch(err){
@@ -210,7 +210,7 @@ function buildShippingRequestPayload(order_no, email){
     city: getVal('modal-from-city'),
     state: getVal('modal-from-state'),
     country: getVal('modal-from-country'),
-    extension: getVal('modal-from-address2'),
+    address2: getVal('modal-from-address2'),
     phoneNumber: getVal('modal-from-phoneNumber')
   };
   const to = {
@@ -220,7 +220,7 @@ function buildShippingRequestPayload(order_no, email){
     city: getVal('modal-shipping-city'),
     state: getVal('modal-shipping-state'),
     country: getVal('modal-shipping-country'),
-    extension: getVal('modal-shipping-address2'),
+    Address2: getVal('modal-shipping-address2'),
     phoneNumber: getVal('modal-shipping-phone')
   };
   const pkg = {
@@ -242,10 +242,12 @@ function buildShippingRequestPayload(order_no, email){
     const rnd = Math.floor(Math.random() * 900 + 100);
     return `${dd}${mm}${yyyy}${hh}${min}${ss}${ms}${dd}${rnd}`;
   })();
-  const shipDate = new Date().toISOString().split('T')[0];
+  const createdAtIso = new Date().toISOString();
+  const shipDate = createdAtIso.split('T')[0];
   return [{
     requestId,
     shipDate,
+    createdAt: createdAtIso,
     serviceType: 'FEDEX_GROUND',
     channel: 'NJF',
     signature: 'NO_SIGNATURE_REQUIRED',
