@@ -104,16 +104,25 @@ async function handleSubmit(e){
   e.preventDefault();
   const submitBtn = document.getElementById('sr-submit');
   const statusMsg = document.getElementById('sr-status-msg');
-  submitBtn.disabled = true;
+  const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+  if(submitBtn){ submitBtn.disabled = true; submitBtn.innerHTML = '⏳ Submitting…'; }
   const order_no = document.getElementById('sr-order-no').value.trim();
   const email = document.getElementById('sr-email').value.trim();
   const prodKey = document.getElementById('sr-product-dim').value.trim();
   const fromKey = document.getElementById('sr-from-address').value.trim();
   const notes = document.getElementById('sr-notes').value.trim();
-  statusMsg.textContent='Submitting (2s)...';
+  statusMsg.textContent='';
 
-  // Artificial 2s loader
-  await new Promise(r=> setTimeout(r,2000));
+  // Prevent duplicate shipping requests for same order
+  const exists = (state.shippingRequests||[]).some(r=> String(r.orderId) === String(order_no));
+  if(exists){
+    statusMsg.innerHTML = '<span style="color:#b26a00;">Shipping Request has been already created.</span>';
+    if(submitBtn){ submitBtn.disabled = false; submitBtn.innerHTML = originalBtnHtml; }
+    return;
+  }
+
+  // Optional small UX pause to show loader
+  await new Promise(r=> setTimeout(r,500));
 
   // Build payload per required JSON spec
   const from = {
@@ -190,7 +199,7 @@ async function handleSubmit(e){
   } catch(err){
     statusMsg.innerHTML = '<span style="color:#b00020;">Failed to submit.</span>';
   } finally {
-    submitBtn.disabled = false;
+    if(submitBtn){ submitBtn.disabled = false; submitBtn.innerHTML = originalBtnHtml; }
   }
 }
 

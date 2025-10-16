@@ -88,20 +88,39 @@ function normalizeRequest(r){
       if('nullValue' in node) return null;
       return undefined;
     };
-    const createdAtStr = val(f.createdAt) || doc.createTime;
+  const createdAtStr = val(f.createdAt) || doc.createTime;
     const updatedAtStr = val(f.updatedAt) || doc.updateTime;
+  const docName = doc.name || '';
+  const creationId = (docName && typeof docName === 'string') ? docName.split('/').pop() : undefined;
+    // Read both legacy (TitleCase) and new (lowercase) field keys
+    const _product = val(f.Product) ?? val(f.product);
+    const _status = val(f.Status) ?? val(f.status);
+    const _email = val(f.Email) ?? val(f.email);
+    const _name = val(f.Name) ?? val(f.name);
+    const _note = val(f.Note) ?? val(f.note);
+    const _tracking = val(f.trackingNumber) ?? val(f.TrackingNumber);
+    const _requestId = val(f.requestId) ?? val(f.RequestId);
+    const _orderId = val(f.orderId) ?? val(f.OrderId);
+    const _url = val(f.url) ?? val(f.Url);
     const base = {
-      Product: val(f.Product),
-      Status: val(f.Status),
-      trackingNumber: val(f.trackingNumber),
-      requestId: val(f.requestId),
-      orderId: val(f.orderId),
-      url: val(f.url),
-      Email: val(f.Email),
-      Name: val(f.Name),
-      Note: val(f.Note),
+      // provide both key styles for downstream mapping
+      Product: _product,
+      product: _product,
+      Status: _status,
+      status: _status,
+      trackingNumber: _tracking,
+      requestId: _requestId,
+      orderId: _orderId,
+      url: _url,
+      Email: _email,
+      email: _email,
+      Name: _name,
+      name: _name,
+      Note: _note,
+      note: _note,
       createdAt: createdAtStr,
-      updatedAt: updatedAtStr
+      updatedAt: updatedAtStr,
+      creationId
     };
     r = base;
   }
@@ -121,7 +140,8 @@ function normalizeRequest(r){
     name: r.Name || r.shipping_name || r['Shipping Name'] || r.name || '',
     note: r.Note || r.note || '',
     createdAt,
-    updatedAt
+    updatedAt,
+    creationId: r.creationId
   };
 }
 
@@ -308,7 +328,8 @@ window.updateShipmentStatus = async function() {
       name: req.name || '',
       product: req.product || '',
       status: newStatus,
-      note: note || '',
+        note: note || '',
+        creationId: req.creationId || ''
     };
 
     // Send to webhook

@@ -1255,6 +1255,22 @@ select#shipping-status-filter {padding:10px 14px;border:1px solid #b8dacf;border
 .nugget-col .linked-title {font-weight:600;color:#23493b;margin-bottom:6px}
 @media (max-width: 1100px){ .nugget-columns {grid-template-columns:repeat(2,1fr);} }
 @media (max-width: 640px){ .nugget-columns {grid-template-columns:1fr;} }
+
+/* Inline notice block for modal messages */
+.notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #fff9e6; /* soft amber */
+    border: 1px solid #f3d08c;
+    border-radius: 10px;
+    color: #6b4e00;
+}
+
+/* Center helpers for modal content */
+.modal-center {display:flex;align-items:center;justify-content:center;min-height:160px}
+.center-align {text-align:center}
 @media (max-width:860px){
     .cards-grid {grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}
 }

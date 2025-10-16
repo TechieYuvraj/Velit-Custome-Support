@@ -1,4 +1,5 @@
 import { api } from '../core/api.js';
+import { state } from '../core/state.js';
 import { FROM_ADDRESSES, PRODUCT_DIMENSIONS, FROM_ADDRESS_BOOK, PRODUCT_SPECS } from '../config/endpoints.js';
 
 function ensureContainer(){
@@ -14,6 +15,28 @@ function ensureContainer(){
 
 export async function openShippingLabelModal(email, orders = []){
   const modal = ensureContainer();
+  // If a single order is provided, block duplicate creation early
+  if(Array.isArray(orders) && orders.length === 1){
+    const orderNo = orders[0]?.['Order Number'];
+    const exists = (state.shippingRequests||[]).some(r=> String(r.orderId) === String(orderNo));
+    if(exists){
+      modal.style.display='flex';
+      modal.innerHTML = `
+        <div class="modal-content" style="max-width:520px;">
+          <div class="modal-header">
+            <h3>Shipping Request</h3>
+            <button class="modal-close" id="close-shipping-label-modal" aria-label="Close">&times;</button>
+          </div>
+          <div class="modal-body modal-center">
+            <div class="notice center-align">
+              Shipping Request has been already created for order <strong>${orderNo}</strong>.
+            </div>
+          </div>
+        </div>`;
+      modal.querySelector('#close-shipping-label-modal').onclick=()=>{ modal.style.display='none'; };
+      return;
+    }
+  }
   modal.style.display='flex';
   modal.innerHTML = `
     <div style="display:flex;flex-direction:column;width:90%;max-width:920px;max-height:80%;background:#fff;border-radius:14px;position:relative;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden;">
@@ -64,9 +87,20 @@ export async function openShippingLabelModal(email, orders = []){
   modal.querySelector('#modal-shipping-label-form').addEventListener('submit', async (e)=>{
     e.preventDefault();
     const orderNo = document.getElementById('modal-order-no')?.value.trim();
-    const payload = buildShippingRequestPayload(orderNo, email);
     const respDiv = document.getElementById('modal-shipping-label-response');
-    respDiv.textContent='Generating label...';
+    respDiv.textContent='';
+    // Disable the Create button and show a loader text
+    const createBtn = modal.querySelector('button[form="modal-shipping-label-form"]');
+    const originalBtnHtml = createBtn ? createBtn.innerHTML : '';
+    if(createBtn){ createBtn.disabled = true; createBtn.innerHTML = '⏳ Creating…'; }
+    // Prevent duplicate shipping requests for same order
+    const exists = (state.shippingRequests||[]).some(r=> String(r.orderId) === String(orderNo));
+    if(exists){
+      respDiv.innerHTML = '<span style="color:#b26a00;">Shipping Request has been already created.</span>';
+      if(createBtn){ createBtn.disabled = false; createBtn.innerHTML = originalBtnHtml; }
+      return;
+    }
+    const payload = buildShippingRequestPayload(orderNo, email);
     // Basic validation on essential fields
     const required = [
       document.getElementById('modal-shipping-name')?.value,
@@ -79,8 +113,9 @@ export async function openShippingLabelModal(email, orders = []){
       document.getElementById('modal-shipping-email')?.value
     ];
     const missing = required.some(v=> !v || !String(v).trim());
-    if(missing.length){
+    if(missing){
       respDiv.innerHTML = `<span style='color:#b00020;'>Please fill all recipient fields.</span>`;
+      if(createBtn){ createBtn.disabled = false; createBtn.innerHTML = originalBtnHtml; }
       return;
     }
     try {
@@ -90,9 +125,12 @@ export async function openShippingLabelModal(email, orders = []){
   const createdAtIso = new Date().toISOString();
   const meta = { date: createdAtIso, product, orderId: orderNo, Name, Email: EmailAddr };
       await api.createShippingLabel(payload, meta);
-      respDiv.innerHTML='<div style="color:#195744;font-weight:600;">Submitted.</div><pre style="margin-top:6px;background:#f5f5f5;padding:8px;border-radius:6px;max-height:140px;overflow:auto;font-size:11px;">'+escapeHtml(JSON.stringify(payload,null,2))+'</pre>';
+      respDiv.innerHTML='<div style="color:#195744;font-weight:600;">Submitted successfully. Your label will be available shortly.</div>';
     } catch(err){
       respDiv.innerHTML = '<span style="color:#b00020;">Failed to submit.</span>';
+    }
+    finally {
+      if(createBtn){ createBtn.disabled = false; createBtn.innerHTML = originalBtnHtml; }
     }
   });
 }

@@ -89,14 +89,24 @@ export function attachOrderHistoryHandlers(){
   const createBtn = document.getElementById('create-shipping-request');
   if(createBtn){ createBtn.addEventListener('click', ()=> openShipRequestModal()); }
   document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.order-card .order-actions .mini-btn');
+    if(!btn) return;
     const card = e.target.closest('.order-card');
-    if(card && card.dataset.orderId){
-      const order = state.orders.find(o=>o.id===card.dataset.orderId);
+    if(!card) return;
+    const orderId = card.dataset.orderId;
+    const exists = (state.shippingRequests||[]).some(r=> String(r.orderId) === String(orderId));
+    if(exists){
+      const order = state.orders.find(o=>o.id===orderId);
       if(order){
-        // For now just open modal prefilled with single order structure shape expected by modal
-  const adapted = [{ 'Order Number': order.id, 'Shipping Name': order.name, 'Shipping Address 1': order.address.line1, 'Shipping Address 2': order.address.line2, 'Shipping City': order.address.city, 'Shipping State': order.address.state, 'Shipping Country': order.address.country, 'Shipping Zipcode': order.address.zip, 'Phone': order.phone || '', 'Email': order.email }];
+        const adapted = [{ 'Order Number': order.id, 'Shipping Name': order.name, 'Shipping Address 1': order.address.line1, 'Shipping Address 2': order.address.line2, 'Shipping City': order.address.city, 'Shipping State': order.address.state, 'Shipping Country': order.address.country, 'Shipping Zipcode': order.address.zip, 'Phone': order.phone || '', 'Email': order.email }];
         openShippingLabelModal(order.email, adapted, []);
       }
+      return;
+    }
+    const order = state.orders.find(o=>o.id===orderId);
+    if(order){
+      const adapted = [{ 'Order Number': order.id, 'Shipping Name': order.name, 'Shipping Address 1': order.address.line1, 'Shipping Address 2': order.address.line2, 'Shipping City': order.address.city, 'Shipping State': order.address.state, 'Shipping Country': order.address.country, 'Shipping Zipcode': order.address.zip, 'Phone': order.phone || '', 'Email': order.email }];
+      openShippingLabelModal(order.email, adapted, []);
     }
   });
 }
@@ -126,6 +136,7 @@ function multilineAddress(addr){
 
 function orderCard(o){
   const addr = multilineAddress(o.address).replace(/\n/g,'<br>');
+  const exists = (state.shippingRequests||[]).some(r=> String(r.orderId) === String(o.id));
   return `<div class="order-card" data-order-id="${o.id}">
     <div class="order-header">
       <h4>${o.id}</h4>
@@ -134,6 +145,6 @@ function orderCard(o){
       <div><strong>${o.name || '—'}</strong><br><span class="email">${o.email || '—'}</span>${o.phone? `<br><span class="phone">${o.phone}</span>`:''}</div>
     </div>
     <div class="order-address">${addr}</div>
-    <div class="order-actions"><button class="mini-btn">Create Shipping Request</button></div>
+    <div class="order-actions">${exists ? '<span class="muted">Shipping Request has been already created.</span>' : '<button class="mini-btn">Create Shipping Request</button>'}</div>
   </div>`;
 }
