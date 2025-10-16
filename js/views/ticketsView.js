@@ -118,6 +118,16 @@ export async function loadTickets(){
 
 function normalizeTicket(t){
   if(!t || typeof t !== 'object') return null;
+  const toIds = (v)=>{
+    if(!v) return [];
+    if(Array.isArray(v)){
+      return v.flatMap(x=> toIds(x));
+    }
+    if(typeof v === 'string'){
+      return v.split(',').map(s=> s.trim()).filter(Boolean);
+    }
+    return [String(v)].filter(Boolean);
+  };
   // Unwrap Firestore document shape if present
   if(t.document && t.document.fields){
     const doc = t.document;
@@ -136,7 +146,12 @@ function normalizeTicket(t){
     };
     const createdAt = doc.createTime ? Date.parse(doc.createTime) : undefined;
     const updatedAt = doc.updateTime ? Date.parse(doc.updateTime) : undefined;
+  const creationId = typeof doc.name === 'string' ? String(doc.name).split('/').pop() : undefined;
     const parseIds = (s)=> (typeof s === 'string' ? s.split(',').map(x=>x.trim()).filter(Boolean) : []);
+  // Read status/priority/title if provided in Firestore fields (support lower/Title case)
+  const statusVal = (val(f.status) || val(f.Status) || 'open');
+  const priorityVal = (val(f.priority) || val(f.Priority) || 'normal');
+  const titleVal = (val(f.title) || val(f.Subject) || '');
     // Build a flat object using expected keys
     const flat = {
       Name: val(f.Name),
@@ -167,6 +182,10 @@ function normalizeTicket(t){
       shippingNo: flat.Shipping_no,
       createdAt: flat.timestamp || flat.createdAt || Date.now(),
       updatedAt: flat.timestamp || flat.updatedAt || Date.now(),
+      creationId,
+      status: statusVal,
+      priority: priorityVal,
+      title: titleVal,
       linkedOrders: flat._linked.orders,
       linkedShipments: flat._linked.shipments,
       linkedConversations: flat._linked.conversations,
@@ -175,6 +194,11 @@ function normalizeTicket(t){
   }
   // Expected fields from webhook can vary; map flexibly
   const normalizedId = t.id || t.ticketId || t.TicketId || t.Ticket_id || t.number || '';
+  // Normalize linked ids from potential CSV strings
+  const linkedOrdersArr = toIds(t.linkedOrders || t.LinkedOrderId || t.Order_no);
+  const linkedShipmentsArr = toIds(t.linkedShipments || t.LinkedShippingId || t.Shipping_no);
+  const linkedConversationsArr = toIds(t.linkedConversations || t.LinkedConversationId);
+  const linkedTicketsArr = toIds(t.linkedTickets || t.LinkedTicketId);
   return {
     id: normalizedId,
     status: (t.status || t.Status || 'open').toString().trim().toLowerCase(),
@@ -184,15 +208,16 @@ function normalizeTicket(t){
     email: t.email || t.Email || '',
     createdAt: t.createdAt || t.Created || t.Time || Date.now(),
     updatedAt: t.updatedAt || t.Updated || t.lastUpdated || Date.now(),
+    creationId: t.creationId,
     conversation: Array.isArray(t.conversation) ? t.conversation : [],
-    internalNotes: t.internalNotes || t.notes || '',
-    orderNo: t.orderNo || t.Order_no || t.order || undefined,
-    shippingNo: t.shippingNo || t.Shipping_no || t.trackingNumber || undefined,
+  internalNotes: t.internalNotes || t.InternalNote || t.internalNote || t.notes || '',
+    orderNo: t.orderNo || (linkedOrdersArr[0] || undefined) || t.order || undefined,
+    shippingNo: t.shippingNo || (linkedShipmentsArr[0] || undefined) || t.trackingNumber || undefined,
     linked: {
-      tickets: t.linkedTickets || t.LinkedTicketId || [],
-      orders: t.linkedOrders || t.LinkedOrderId || (t.Order_no ? [t.Order_no] : []),
-      shipments: t.linkedShipments || t.LinkedShippingId || (t.Shipping_no ? [t.Shipping_no] : []),
-      conversations: t.linkedConversations || t.LinkedConversationId || []
+      tickets: linkedTicketsArr,
+      orders: linkedOrdersArr,
+      shipments: linkedShipmentsArr,
+      conversations: linkedConversationsArr
     }
   };
 }
@@ -514,7 +539,7 @@ function ensureCreateTicketModal(){
               <ul id="ct-name-results" class="search-results" style="display:none;"></ul>
             </div>
           </div>
-          <div class="form-group"><label>Phone</label><input id="ct-phone" class="form-control" placeholder="Optional phone" /></div>
+          <div class="form-group"><label>Phone</label><input id="ct-phone" class="form-control" placeholder="Optional phone" inputmode="numeric" pattern="[0-9]*" /></div>
           <div class="form-group"><label>Ticket ID</label><input id="ct-ticket-id" class="form-control" placeholder="Auto-generated" readonly /></div>
           <div class="form-row" style="display:flex;gap:10px;">
             <div class="form-group" style="flex:1">
@@ -543,6 +568,10 @@ function ensureCreateTicketModal(){
                 <option value="web">Web</option>
               </select>
             </div>
+          </div>
+          <div class="form-group">
+            <label>Internal Note</label>
+            <textarea id="ct-notes" class="form-control" placeholder="Add internal note..." style="min-height:70px"></textarea>
           </div>
           <div class="form-group">
             <label>Linked Orders</label>
@@ -587,6 +616,9 @@ function ensureCreateTicketModal(){
 
   // wire submit
   document.getElementById('ct-submit')?.addEventListener('click', onSubmitCreateTicket);
+  // enforce numeric-only phone
+  const ctPhone = document.getElementById('ct-phone');
+  ctPhone?.addEventListener('input', ()=>{ ctPhone.value = ctPhone.value.replace(/\D/g,''); });
 
   // wire search inputs
   wireEmailDropdown();
@@ -623,13 +655,17 @@ let selectedEmail = '';
 
 function addChip(containerId, idVal, onRemove){
   const wrap = document.getElementById(containerId); if(!wrap) return;
-  const chip = document.createElement('span');
-  chip.className = 'chip';
-  chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:#eef6f4;border:1px solid #cfe2dc;color:#194b3b;padding:4px 8px;border-radius:999px;font-size:.78rem;';
-  chip.innerHTML = `${escapeHtml(String(idVal))} <button aria-label="Remove" style="border:none;background:transparent;color:#194b3b;cursor:pointer;font-weight:700">×</button>`;
-  const btn = chip.querySelector('button');
-  btn.addEventListener('click', ()=>{ chip.remove(); onRemove?.(); });
-  wrap.appendChild(chip);
+  // If idVal is a combined CSV string, split and add multiple chips
+  const vals = String(idVal).includes(',') ? String(idVal).split(',').map(s=> s.trim()).filter(Boolean) : [String(idVal)];
+  vals.forEach(v=>{
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:#eef6f4;border:1px solid #cfe2dc;color:#194b3b;padding:4px 8px;border-radius:999px;font-size:.78rem;';
+    chip.innerHTML = `${escapeHtml(String(v))} <button aria-label="Remove" style="border:none;background:transparent;color:#194b3b;cursor:pointer;font-weight:700">×</button>`;
+    const btn = chip.querySelector('button');
+    btn.addEventListener('click', ()=>{ chip.remove(); onRemove?.(); });
+    wrap.appendChild(chip);
+  });
 }
 
 function wireOrderMulti(){
@@ -932,6 +968,7 @@ async function onSubmitCreateTicket(){
   const name = (document.getElementById('ct-name')?.value||'').trim();
   const email = (document.getElementById('ct-email')?.value||'').trim();
   const phone = (document.getElementById('ct-phone')?.value||'').trim();
+  const internalNote = (document.getElementById('ct-notes')?.value||'').trim();
   const status = 'open';
   const priority = (document.getElementById('ct-priority')?.value||'normal').trim();
   const category = (document.getElementById('ct-category')?.value||'').trim();
@@ -958,11 +995,13 @@ async function onSubmitCreateTicket(){
     Name: name,
     Email: email,
     Phone: phone,
+    internalNote: internalNote,
     Ticket_id: ticketId,
     Status: status,
     Priority: priority,
     Category: category,
     SourceChannel: sourceChannel,
+    createdAt: new Date().toISOString(),
     // Send arrays of JSON objects for linked references as requested
     linkedOrders: orderIds.map(id=> ({ orderId: id })),
     linkedShipments: shipIds.map(id=> ({ shipmentId: id })),
@@ -985,6 +1024,7 @@ async function onSubmitCreateTicket(){
     linkedShipments: shipIds,
     linkedConversations: convIds,
     linkedTickets: tickIds,
+    internalNote: internalNote,
     createdAt: Date.now(), updatedAt: Date.now()
   });
   // Mark as local (not rendered, but useful internally)
@@ -1042,7 +1082,14 @@ async function onSubmitCreateTicket(){
   }, 'Creating...');
 }
 
-// ===== Update Ticket Modal =====
+// ===== Update Ticket Modal (mirrors Create Ticket) =====
+let utSelectedOrderIds = [];
+let utSelectedShipmentIds = [];
+let utSelectedConversationIds = [];
+let utSelectedTicketIds = [];
+let utSelectedName = '';
+let utSelectedEmail = '';
+
 function ensureUpdateTicketModal(){
   if(document.getElementById('update-ticket-modal')) return;
   const html = `
@@ -1053,6 +1100,21 @@ function ensureUpdateTicketModal(){
           <button class="modal-close" onclick="closeUpdateTicketModal()">&times;</button>
         </div>
         <div class="modal-body">
+          <div class="form-group">
+            <label>Email</label>
+            <div class="search-dropdown">
+              <input id="ut-email" class="form-control" placeholder="Select or type email" />
+              <ul id="ut-email-results" class="search-results" style="display:none;"></ul>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Name</label>
+            <div class="search-dropdown">
+              <input id="ut-name" class="form-control" placeholder="Select or type name" />
+              <ul id="ut-name-results" class="search-results" style="display:none;"></ul>
+            </div>
+          </div>
+          <div class="form-group"><label>Phone</label><input id="ut-phone" class="form-control" placeholder="Optional phone" inputmode="numeric" pattern="[0-9]*" /></div>
           <div class="form-group"><label>Ticket ID</label><input id="ut-ticket-id" class="form-control" readonly /></div>
           <div class="form-row" style="display:flex;gap:10px;">
             <div class="form-group" style="flex:1">
@@ -1071,9 +1133,54 @@ function ensureUpdateTicketModal(){
               </select>
             </div>
           </div>
-          <div class="form-group"><label>Title</label><input id="ut-title" class="form-control" placeholder="Subject or title" /></div>
-          <div class="form-group"><label>Name</label><input id="ut-name" class="form-control" /></div>
-          <div class="form-group"><label>Email</label><input id="ut-email" class="form-control" /></div>
+          <div class="form-row" style="display:flex;gap:10px;">
+            <div class="form-group" style="flex:1"><label>Category</label><input id="ut-category" class="form-control" placeholder="e.g. Support" /></div>
+            <div class="form-group" style="flex:1">
+              <label>Source Channel</label>
+              <select id="ut-source" class="form-control">
+                <option value="email">Email</option>
+                <option value="chat">Chat</option>
+                <option value="phone">Phone</option>
+                <option value="web">Web</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Internal Note</label>
+            <textarea id="ut-notes" class="form-control" placeholder="Add internal note..." style="min-height:70px"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Linked Orders</label>
+            <div class="search-dropdown">
+              <input id="ut-order-search" class="form-control" placeholder="Search orders... (filtered by email)" />
+              <ul id="ut-order-results" class="search-results" style="display:none;"></ul>
+            </div>
+            <div id="ut-order-selected" class="chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+          </div>
+          <div class="form-group">
+            <label>Linked Shipments</label>
+            <div class="search-dropdown">
+              <input id="ut-ship-search" class="form-control" placeholder="Search shipping requests... (filtered by email)" />
+              <ul id="ut-ship-results" class="search-results" style="display:none;"></ul>
+            </div>
+            <div id="ut-ship-selected" class="chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+          </div>
+          <div class="form-group">
+            <label>Linked Conversations</label>
+            <div class="search-dropdown">
+              <input id="ut-conv-search" class="form-control" placeholder="Search conversations... (filtered by email)" />
+              <ul id="ut-conv-results" class="search-results" style="display:none;"></ul>
+            </div>
+            <div id="ut-conv-selected" class="chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+          </div>
+          <div class="form-group">
+            <label>Linked Tickets</label>
+            <div class="search-dropdown">
+              <input id="ut-tick-search" class="form-control" placeholder="Search tickets... (filtered by email)" />
+              <ul id="ut-tick-results" class="search-results" style="display:none;"></ul>
+            </div>
+            <div id="ut-tick-selected" class="chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn-secondary" onclick="closeUpdateTicketModal()">Cancel</button>
@@ -1082,20 +1189,54 @@ function ensureUpdateTicketModal(){
       </div>
     </div>`;
   document.body.insertAdjacentHTML('beforeend', html);
+  // Bind handlers for update modal
   document.getElementById('ut-submit')?.addEventListener('click', onSubmitUpdateTicket);
+  const utPhone = document.getElementById('ut-phone');
+  utPhone?.addEventListener('input', ()=>{ utPhone.value = utPhone.value.replace(/\D/g,''); });
+  utWireEmailDropdown();
+  utWireNameDropdown();
+  utWireOrderMulti();
+  utWireShipMulti();
+  utWireConvMulti();
+  utWireTicketMulti();
 }
 
 export function openUpdateTicketModal(ticket){
   ensureUpdateTicketModal();
   const modal = document.getElementById('update-ticket-modal');
   if(!modal) return;
-  // Prefill
+  // Prefill scalar fields
+  utSelectedEmail = ticket.email || '';
+  utSelectedName = ticket.customer || ticket.name || '';
+  document.getElementById('ut-email').value = utSelectedEmail;
+  document.getElementById('ut-name').value = utSelectedName;
+  document.getElementById('ut-phone').value = ticket.phone || '';
   document.getElementById('ut-ticket-id').value = ticket.id || '';
+  const utNotes = document.getElementById('ut-notes');
+  if(utNotes) utNotes.value = ticket.internalNotes || '';
   document.getElementById('ut-status').value = (ticket.status||'open');
   document.getElementById('ut-priority').value = (ticket.priority||'normal');
-  document.getElementById('ut-title').value = ticket.title || '';
-  document.getElementById('ut-name').value = ticket.customer || ticket.name || '';
-  document.getElementById('ut-email').value = ticket.email || '';
+  document.getElementById('ut-category').value = ticket.category || '';
+  document.getElementById('ut-source').value = ticket.sourceChannel || 'email';
+  // Prefill linked chips
+  utSelectedOrderIds = Array.from(new Set(Array.isArray(ticket.linked?.orders) ? ticket.linked.orders : [])).map(String);
+  utSelectedShipmentIds = Array.from(new Set(Array.isArray(ticket.linked?.shipments) ? ticket.linked.shipments : [])).map(String);
+  utSelectedConversationIds = Array.from(new Set(Array.isArray(ticket.linked?.conversations) ? ticket.linked.conversations : [])).map(String);
+  utSelectedTicketIds = Array.from(new Set(Array.isArray(ticket.linked?.tickets) ? ticket.linked.tickets : [])).map(String);
+  const clearAndFill = (containerId, ids)=>{
+    const c = document.getElementById(containerId); if(c) c.replaceChildren();
+    ids.forEach(id=> addChip(containerId, id, ()=>{
+      if(containerId==='ut-order-selected') utSelectedOrderIds = utSelectedOrderIds.filter(x=> x!==id);
+      if(containerId==='ut-ship-selected') utSelectedShipmentIds = utSelectedShipmentIds.filter(x=> x!==id);
+      if(containerId==='ut-conv-selected') utSelectedConversationIds = utSelectedConversationIds.filter(x=> x!==id);
+      if(containerId==='ut-tick-selected') utSelectedTicketIds = utSelectedTicketIds.filter(x=> x!==id);
+    }));
+  };
+  clearAndFill('ut-order-selected', utSelectedOrderIds);
+  clearAndFill('ut-ship-selected', utSelectedShipmentIds);
+  clearAndFill('ut-conv-selected', utSelectedConversationIds);
+  clearAndFill('ut-tick-selected', utSelectedTicketIds);
+
   modal.style.display = 'flex';
 }
 
@@ -1104,34 +1245,280 @@ window.closeUpdateTicketModal = function(){
   if(modal){ modal.style.display='none'; }
 };
 
+// Update modal dropdowns and multis (email/name filtered like create)
+function utWireNameDropdown(){
+  const input = document.getElementById('ut-name');
+  const listEl = document.getElementById('ut-name-results');
+  if(!input || !listEl) return;
+  const unique = new Map();
+  (state.emailConversations||[]).forEach(c=>{ const n=c.name||''; const e=c.email||''; if(n){ unique.set(n,e); } });
+  const allItems = Array.from(unique.entries());
+  const render = (term='')=>{
+    const t = term.toLowerCase();
+    const items = allItems.filter(([n,e])=> n.toLowerCase().includes(t) || (e||'').toLowerCase().includes(t)).slice(0,10);
+    listEl.innerHTML = items.map(([n,e])=> `<li data-name="${escapeHtml(n)}" data-email="${escapeHtml(e)}"><strong>${escapeHtml(n)}</strong>${e?` <span class='muted'>${escapeHtml(e)}</span>`:''}</li>`).join('');
+    listEl.style.display = items.length ? 'block' : 'none';
+  };
+  input.addEventListener('click', ()=>{ listEl.style.display = (listEl.style.display==='block')?'none':'block'; if(listEl.style.display==='block') render(''); });
+  input.addEventListener('input', ()=> render(input.value));
+  listEl.addEventListener('click', (e)=>{
+    const li = e.target.closest('li'); if(!li) return;
+    utSelectedName = li.dataset.name || '';
+    input.value = utSelectedName;
+    const emailInput = document.getElementById('ut-email');
+    const paired = li.dataset.email || '';
+    if(emailInput && paired && !emailInput.value){ emailInput.value = paired; utSelectedEmail = paired; }
+    ['ut-order-results','ut-ship-results','ut-conv-results','ut-tick-results'].forEach(id=> document.getElementById(id)?.style.setProperty('display','none'));
+    listEl.style.display = 'none';
+  });
+  document.addEventListener('click', (ev)=>{ if(!ev.target.closest('.search-dropdown')) listEl.style.display='none'; });
+}
+
+function utWireEmailDropdown(){
+  const input = document.getElementById('ut-email');
+  const listEl = document.getElementById('ut-email-results');
+  if(!input || !listEl) return;
+  const allEmails = Array.from(new Set((state.emailConversations||[]).map(c=> c.email || '').filter(Boolean)));
+  const render = (term='')=>{
+    const t = term.toLowerCase();
+    const items = allEmails.filter(e=> e.toLowerCase().includes(t)).slice(0,10);
+    listEl.innerHTML = items.map(e=> `<li data-email="${escapeHtml(e)}">${escapeHtml(e)}</li>`).join('');
+    listEl.style.display = items.length ? 'block' : 'none';
+  };
+  input.addEventListener('click', ()=>{ listEl.style.display = (listEl.style.display==='block')?'none':'block'; if(listEl.style.display==='block') render(''); });
+  input.addEventListener('input', ()=> render(input.value));
+  listEl.addEventListener('click', (e)=>{
+    const li = e.target.closest('li'); if(!li) return;
+    utSelectedEmail = li.dataset.email || '';
+    input.value = utSelectedEmail;
+    // reset selections
+    utSelectedOrderIds=[]; utSelectedShipmentIds=[]; utSelectedConversationIds=[]; utSelectedTicketIds=[];
+    ['ut-order-selected','ut-ship-selected','ut-conv-selected','ut-tick-selected'].forEach(id=> document.getElementById(id)?.replaceChildren());
+    listEl.style.display = 'none';
+  });
+  document.addEventListener('click', (ev)=>{ if(!ev.target.closest('.search-dropdown')) listEl.style.display='none'; });
+}
+
+function utWireOrderMulti(){
+  const input = document.getElementById('ut-order-search');
+  const listEl = document.getElementById('ut-order-results');
+  if(!input || !listEl) return;
+  const makeItems = (term)=>{
+    const termL = term.toLowerCase();
+    let base = (state.orders||[]);
+    if(utSelectedEmail){ base = base.filter(o=> (o.email||'').toLowerCase() === utSelectedEmail.toLowerCase()); }
+    const items = base.filter(o=>{
+      const hay = [o.id,o.name,o.email,o.phone,o.address?.line1,o.address?.city,o.address?.state,o.address?.zip].join(' ').toLowerCase();
+      return hay.includes(termL);
+    }).slice(0,10);
+    listEl.innerHTML = items.map(o=> `<li data-val="${escapeHtml(String(o.id))}"><strong>${escapeHtml(String(o.id))}</strong> — ${escapeHtml(o.name||'')} <span class="muted">${escapeHtml(o.email||'')}</span></li>`).join('');
+    listEl.style.display = items.length ? 'block' : 'none';
+  };
+  input.addEventListener('click', ()=>{
+    if(listEl.style.display === 'none' || !listEl.style.display){
+      let recent = [...(state.orders||[])];
+      if(utSelectedEmail){ recent = recent.filter(o=> (o.email||'').toLowerCase() === utSelectedEmail.toLowerCase()); }
+      recent = recent.slice(-10).reverse();
+      listEl.innerHTML = recent.map(o=> `<li data-val="${escapeHtml(String(o.id))}"><strong>${escapeHtml(String(o.id))}</strong> — ${escapeHtml(o.name||'')} <span class="muted">${escapeHtml(o.email||'')}</span></li>`).join('');
+      listEl.style.display = recent.length ? 'block' : 'none';
+    } else { listEl.style.display = 'none'; }
+  });
+  input.addEventListener('input', ()=>{ if(listEl.style.display!=='block') listEl.style.display='block'; makeItems(input.value); });
+  listEl.addEventListener('click', (e)=>{
+    const li = e.target.closest('li'); if(!li) return;
+    const chosen = li.dataset.val || '';
+    if(chosen && !utSelectedOrderIds.includes(chosen)){
+      utSelectedOrderIds.push(chosen);
+      addChip('ut-order-selected', chosen, ()=>{ utSelectedOrderIds = utSelectedOrderIds.filter(x=> x!==chosen); });
+    }
+    input.value = ''; listEl.style.display='none';
+  });
+  document.addEventListener('click', (ev)=>{ if(!ev.target.closest('.search-dropdown')) listEl.style.display='none'; });
+}
+
+function utWireShipMulti(){
+  const input = document.getElementById('ut-ship-search');
+  const listEl = document.getElementById('ut-ship-results');
+  if(!input || !listEl) return;
+  const makeItems = (term)=>{
+    const termL = term.toLowerCase();
+    let base = (state.shippingRequests||[]);
+    if(utSelectedEmail){ base = base.filter(r=> (r.email||'').toLowerCase() === utSelectedEmail.toLowerCase()); }
+    const items = base.filter(r=>{
+      const hay = [r.id,r.trackingNumber,r.orderId,r.email,r.name,r.status,r.product].join(' ').toLowerCase();
+      return hay.includes(termL);
+    }).slice(0,10);
+    listEl.innerHTML = items.map(r=> `<li data-val="${escapeHtml(String(r.trackingNumber||r.id||''))}"><strong>${escapeHtml(String(r.trackingNumber||r.id||''))}</strong> — ${escapeHtml(r.status||'')} <span class="muted">${escapeHtml(r.email||'')}</span></li>`).join('');
+    listEl.style.display = items.length ? 'block' : 'none';
+  };
+  input.addEventListener('click', ()=>{
+    if(listEl.style.display === 'none' || !listEl.style.display){
+      let recent = [...(state.shippingRequests||[])];
+      if(utSelectedEmail){ recent = recent.filter(r=> (r.email||'').toLowerCase() === utSelectedEmail.toLowerCase()); }
+      recent = recent.slice(-10).reverse();
+      listEl.innerHTML = recent.map(r=> `<li data-val="${escapeHtml(String(r.trackingNumber||r.id||''))}"><strong>${escapeHtml(String(r.trackingNumber||r.id||''))}</strong> — ${escapeHtml(r.status||'')} <span class="muted">${escapeHtml(r.email||'')}</span></li>`).join('');
+      listEl.style.display = recent.length ? 'block' : 'none';
+    } else { listEl.style.display = 'none'; }
+  });
+  input.addEventListener('input', ()=>{ if(listEl.style.display!=='block') listEl.style.display='block'; makeItems(input.value); });
+  listEl.addEventListener('click', (e)=>{
+    const li = e.target.closest('li'); if(!li) return;
+    const chosen = li.dataset.val || '';
+    if(chosen && !utSelectedShipmentIds.includes(chosen)){
+      utSelectedShipmentIds.push(chosen);
+      addChip('ut-ship-selected', chosen, ()=>{ utSelectedShipmentIds = utSelectedShipmentIds.filter(x=> x!==chosen); });
+    }
+    input.value=''; listEl.style.display='none';
+  });
+  document.addEventListener('click', (ev)=>{ if(!ev.target.closest('.search-dropdown')) listEl.style.display='none'; });
+}
+
+function utWireConvMulti(){
+  const input = document.getElementById('ut-conv-search');
+  const listEl = document.getElementById('ut-conv-results');
+  if(!input || !listEl) return;
+  const makeItems = (term)=>{
+    const termL = term.toLowerCase();
+    let base = (state.emailConversations||[]);
+    if(utSelectedEmail){ base = base.filter(c=> (c.email||'').toLowerCase() === utSelectedEmail.toLowerCase()); }
+    const items = base.filter(c=>{
+      const hay = [c.id,c.conversation_id,c.threadId,c.email,c.name].join(' ').toLowerCase();
+      return hay.includes(termL);
+    }).slice(0,10);
+    listEl.innerHTML = items.map(c=> {
+      const id = c.id || c.conversation_id || c.threadId || c.email;
+      return `<li data-val="${escapeHtml(String(id))}"><strong>${escapeHtml(String(id))}</strong> — ${escapeHtml(c.name||'')} <span class="muted">${escapeHtml(c.email||'')}</span></li>`;
+    }).join('');
+    listEl.style.display = items.length ? 'block' : 'none';
+  };
+  input.addEventListener('click', ()=>{
+    if(listEl.style.display === 'none' || !listEl.style.display){
+      let recent = [...(state.emailConversations||[])];
+      if(utSelectedEmail){ recent = recent.filter(c=> (c.email||'').toLowerCase() === utSelectedEmail.toLowerCase()); }
+      recent = recent.slice(-10).reverse();
+      listEl.innerHTML = recent.map(c=> {
+        const id = c.id || c.conversation_id || c.threadId || c.email;
+        return `<li data-val="${escapeHtml(String(id))}"><strong>${escapeHtml(String(id))}</strong> — ${escapeHtml(c.name||'')} <span class="muted">${escapeHtml(c.email||'')}</span></li>`;
+      }).join('');
+      listEl.style.display = recent.length ? 'block' : 'none';
+    } else { listEl.style.display = 'none'; }
+  });
+  input.addEventListener('input', ()=>{ if(listEl.style.display!=='block') listEl.style.display='block'; makeItems(input.value); });
+  listEl.addEventListener('click', (e)=>{
+    const li = e.target.closest('li'); if(!li) return;
+    const chosen = li.dataset.val || '';
+    if(chosen && !utSelectedConversationIds.includes(chosen)){
+      utSelectedConversationIds.push(chosen);
+      addChip('ut-conv-selected', chosen, ()=>{ utSelectedConversationIds = utSelectedConversationIds.filter(x=> x!==chosen); });
+    }
+    input.value=''; listEl.style.display='none';
+  });
+  document.addEventListener('click', (ev)=>{ if(!ev.target.closest('.search-dropdown')) listEl.style.display='none'; });
+}
+
+function utWireTicketMulti(){
+  const input = document.getElementById('ut-tick-search');
+  const listEl = document.getElementById('ut-tick-results');
+  if(!input || !listEl) return;
+  const makeItems = (term)=>{
+    const termL = term.toLowerCase();
+    let base = (state.tickets||[]);
+    if(utSelectedEmail){ base = base.filter(t=> (t.email||'').toLowerCase() === utSelectedEmail.toLowerCase()); }
+    const items = base.filter(t=>{
+      const hay = [t.id,t.customer,t.email,t.orderNo,t.shippingNo,t.status,t.priority].join(' ').toLowerCase();
+      return hay.includes(termL);
+    }).slice(0,10);
+    listEl.innerHTML = items.map(t=> `<li data-val="${escapeHtml(String(t.id))}"><strong>${escapeHtml(String(t.id))}</strong> — ${escapeHtml(t.customer||'')} <span class="muted">${escapeHtml(t.email||'')}</span></li>`).join('');
+    listEl.style.display = items.length ? 'block' : 'none';
+  };
+  input.addEventListener('click', ()=>{
+    if(listEl.style.display === 'none' || !listEl.style.display){
+      let recent = [...(state.tickets||[])];
+      if(utSelectedEmail){ recent = recent.filter(t=> (t.email||'').toLowerCase() === utSelectedEmail.toLowerCase()); }
+      recent = recent.slice(-10).reverse();
+      listEl.innerHTML = recent.map(t=> `<li data-val="${escapeHtml(String(t.id))}"><strong>${escapeHtml(String(t.id))}</strong> — ${escapeHtml(t.customer||'')} <span class="muted">${escapeHtml(t.email||'')}</span></li>`).join('');
+      listEl.style.display = recent.length ? 'block' : 'none';
+    } else { listEl.style.display = 'none'; }
+  });
+  input.addEventListener('input', ()=>{ if(listEl.style.display!=='block') listEl.style.display='block'; makeItems(input.value); });
+  listEl.addEventListener('click', (e)=>{
+    const li = e.target.closest('li'); if(!li) return;
+    const chosen = li.dataset.val || '';
+    if(chosen && !utSelectedTicketIds.includes(chosen)){
+      utSelectedTicketIds.push(chosen);
+      addChip('ut-tick-selected', chosen, ()=>{ utSelectedTicketIds = utSelectedTicketIds.filter(x=> x!==chosen); });
+    }
+    input.value=''; listEl.style.display='none';
+  });
+  document.addEventListener('click', (ev)=>{ if(!ev.target.closest('.search-dropdown')) listEl.style.display='none'; });
+}
+
 async function onSubmitUpdateTicket(){
   const btn = document.getElementById('ut-submit');
   const id = (document.getElementById('ut-ticket-id')?.value||'').trim();
-  const status = (document.getElementById('ut-status')?.value||'open').trim();
-  const priority = (document.getElementById('ut-priority')?.value||'normal').trim();
-  const title = (document.getElementById('ut-title')?.value||'').trim();
   const name = (document.getElementById('ut-name')?.value||'').trim();
   const email = (document.getElementById('ut-email')?.value||'').trim();
+  const phone = (document.getElementById('ut-phone')?.value||'').trim();
+  const internalNote = (document.getElementById('ut-notes')?.value||'').trim();
+  const status = (document.getElementById('ut-status')?.value||'open').trim();
+  const priority = (document.getElementById('ut-priority')?.value||'normal').trim();
+  const category = (document.getElementById('ut-category')?.value||'').trim();
+  const sourceChannel = (document.getElementById('ut-source')?.value||'email').trim();
 
-  if(!id){ alert('Missing Ticket ID'); return; }
+  if(!id || !email){ alert('Please ensure Ticket ID and Email are set.'); return; }
+
+  const orderIds = [...utSelectedOrderIds];
+  const shipIds = [...utSelectedShipmentIds];
+  const convIds = [...utSelectedConversationIds];
+  const tickIds = [...utSelectedTicketIds];
 
   const payload = {
+    business_id: BUSINESS_ID,
+    Name: name,
+    Email: email,
+    Phone: phone,
     Ticket_id: id,
     Status: status,
     Priority: priority,
-    Subject: title,
-    Name: name,
-    Email: email
+    Category: category,
+    SourceChannel: sourceChannel,
+    // Send full datetime for update timestamp
+    updatedAt: new Date().toISOString(),
+    internalNote: internalNote,
+    linkedOrders: orderIds.map(v=> ({ orderId: v })),
+    linkedShipments: shipIds.map(v=> ({ shipmentId: v })),
+    linkedConversations: convIds.map(v=> ({ conversationId: v })),
+    linkedTickets: tickIds.map(v=> ({ ticketId: v }))
   };
+
+  const current = (state.tickets||[]).find(t=> t.id===id);
+  const creationId = current?.creationId;
 
   await withButtonLoader(btn, async ()=>{
     try{
-      await api.updateTicket(payload);
-      // Update local state
-      updateArray('tickets', list=> list.map(t=> t.id===id ? { ...t, status, priority, title, customer: name || t.customer, email: email || t.email, updatedAt: Date.now() } : t));
-      // If currently selected, refresh detail
-      const sel = state.selectedTicket && state.selectedTicket.id === id ? { ...state.selectedTicket, status, priority, title, customer: name || state.selectedTicket.customer, email: email || state.selectedTicket.email, updatedAt: Date.now() } : null;
-      if(sel){ setState({ selectedTicket: sel }); }
+      await api.updateTicket(payload, { creationId });
+      // Update local state similarly
+      updateArray('tickets', list=> list.map(t=> t.id===id ? {
+        ...t,
+        status, priority,
+        customer: name || t.customer,
+        email: email || t.email,
+  internalNotes: internalNote || t.internalNotes,
+        category, sourceChannel,
+        linked: {
+          ...t.linked,
+          orders: orderIds,
+          shipments: shipIds,
+          conversations: convIds,
+          tickets: tickIds
+        },
+        orderNo: orderIds[0] || t.orderNo,
+        shippingNo: shipIds[0] || t.shippingNo,
+        updatedAt: Date.now()
+      } : t));
+      if(state.selectedTicket && state.selectedTicket.id===id){
+        setState({ selectedTicket: (state.tickets||[]).find(t=> t.id===id) });
+      }
       closeUpdateTicketModal();
     }catch(e){
       console.error('Failed to update ticket', e);

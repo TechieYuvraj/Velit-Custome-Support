@@ -52,5 +52,10 @@ export const api = {
   updateShipmentStatus: (payload) => request(ENDPOINTS.shipmentStatus, { body: payload }),
   fetchTickets: () => request(ENDPOINTS.ticketsFetch, { body: { chatInput: 'FetchTickets' } }),
   createTicket: (payload) => request(ENDPOINTS.ticketsCreate, { body: payload }),
-  updateTicket: (payload) => request(ENDPOINTS.ticketsUpdate, { body: payload })
+  updateTicket: (payload, meta = {}) => {
+    const params = [];
+    if (meta.creationId) params.push(`creationId=${encodeURIComponent(meta.creationId)}`);
+    const url = params.length ? `${ENDPOINTS.ticketsUpdate}?${params.join('&')}` : ENDPOINTS.ticketsUpdate;
+    return request(url, { method: 'PATCH', body: payload });
+  }
 };
