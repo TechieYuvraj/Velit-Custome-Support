@@ -20,7 +20,14 @@ export async function loadOrders({ retry=false }={}){
   let usedSource = 'mock';
   try {
     const data = await api.fetchOrderHistory(sessionId, 'Order History');
-    if(Array.isArray(data)) remote = data; else if(data && typeof data === 'object') remote = [data];
+    if(Array.isArray(data)) {
+      remote = data;
+    } else if (data && Array.isArray(data.documents)) {
+      // Firestore list shape
+      remote = data.documents.map(d => ({ document: d }));
+    } else if(data && typeof data === 'object') {
+      remote = [data];
+    }
   } catch(err){
     if(retry) console.warn('Retry failed for order history', err); else console.warn('Order history fetch failed, using mock data', err);
   }
@@ -65,8 +72,30 @@ function buildSessionId(){
 
 function normalizeRemoteOrder(r){
   if(!r) return null;
-  // New canonical remote shape (sample provided):
-  // { "Order Number": 1025, "Shipping Name": "...", "Shipping Address 1": "...", ... }
+  // Support Firestore document structure
+  if (r.document && r.document.fields) {
+    const doc = r.document;
+    const f = doc.fields || {};
+    const sval = (n)=> n && n.stringValue != null ? String(n.stringValue) : undefined;
+    const tval = (n)=> n && n.timestampValue ? String(n.timestampValue) : undefined;
+    const id = sval(f.order_number) || sval(f.order_no) || sval(f.id);
+    if(!id) return null;
+    const name = sval(f.shipping_name) || sval(f.name) || '';
+    const email = sval(f.email) || '';
+    const phone = (sval(f.phone) || '').toString();
+    const address = {
+      line1: sval(f.shipping_address_1) || sval(f.address1) || sval(f.address_1) || '',
+      line2: sval(f.shipping_address_2) || sval(f.address2) || sval(f.address_2) || '',
+      city: sval(f.shipping_city) || sval(f.city) || '',
+      state: sval(f.shipping_state) || sval(f.state) || '',
+      zip: sval(f.shipping_zipcode) || sval(f.zip) || sval(f.zipcode) || '',
+      country: sval(f.shipping_country) || sval(f.country) || ''
+    };
+    // Optional metadata (not currently displayed)
+    const createdAt = tval(f.createdAt) || doc.createTime;
+    return { id: String(id), name, email, phone, address, createdAt };
+  }
+  // Backward-compatible flat/canonical structures
   const id = r['Order Number'] || r.order_number || r.order_no || r.id;
   if(!id) return null;
   const name = r['Shipping Name'] || r.name || '';
