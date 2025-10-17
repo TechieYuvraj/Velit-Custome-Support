@@ -6,72 +6,6 @@ import { showLoader, hideLoader, withButtonLoader } from '../utils/loader.js';
 let unsub = null;
 let initialized = false;
 
-// Local storage for recently created tickets (temporary cache)
-const LOCAL_TICKETS_KEY = 'velit_recent_tickets';
-const LOCAL_TICKETS_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
-
-function readLocalTickets(){
-  try {
-    const raw = localStorage.getItem(LOCAL_TICKETS_KEY);
-    const arr = raw ? JSON.parse(raw) : [];
-    if(!Array.isArray(arr)) return [];
-    const now = Date.now();
-    // prune expired
-    const fresh = arr.filter(t => typeof t === 'object' && t && (now - (t.createdAt||0)) <= LOCAL_TICKETS_TTL_MS);
-    if(fresh.length !== arr.length){ localStorage.setItem(LOCAL_TICKETS_KEY, JSON.stringify(fresh)); }
-    return fresh.map(normalizeTicket).filter(Boolean);
-  } catch { return []; }
-}
-
-function writeLocalTickets(list){
-  try {
-    const serializable = (list||[]).map(t => ({
-      id: t.id, status: t.status, priority: t.priority, title: t.title || '',
-      Name: t.customer || t.name || '', Email: t.email || '',
-      Order_no: t.orderNo || '', Shipping_no: t.shippingNo || '',
-      createdAt: t.createdAt || Date.now(), updatedAt: t.updatedAt || t.createdAt || Date.now()
-    }));
-    localStorage.setItem(LOCAL_TICKETS_KEY, JSON.stringify(serializable));
-  } catch {/* no-op */}
-}
-
-function addLocalTicket(ticket){
-  const cur = readLocalTickets();
-  const next = [ticket, ...cur.filter(t => (t.id||'') !== (ticket.id||''))];
-  writeLocalTickets(next);
-}
-
-function removeLocalTicketById(id){
-  const cur = readLocalTickets();
-  writeLocalTickets(cur.filter(t => (t.id||'') !== (id||'')));
-}
-
-function mergeWithLocalTickets(serverList){
-  const locals = readLocalTickets();
-  const server = (serverList||[]).map(normalizeTicket).filter(Boolean);
-
-  const serverIds = new Set(server.map(t => String(t.id||'')));
-  const onlyLocal = locals.filter(t => !serverIds.has(String(t.id||'')));
-
-  const isStrictId = (id)=> /^VEL-\d{6}$/.test(String(id||''));
-  const hasLocalEquivalent = (s)=> locals.some(l => {
-    const emailMatch = (l.email||'').toLowerCase() && (s.email||'').toLowerCase() && (l.email||'').toLowerCase() === (s.email||'').toLowerCase();
-    const orderMatch = l.orderNo && s.orderNo && String(l.orderNo) === String(s.orderNo);
-    const shipMatch = l.shippingNo && s.shippingNo && String(l.shippingNo) === String(s.shippingNo);
-    const nameMatch = (l.customer||l.name||'').toLowerCase() && (s.customer||s.name||'').toLowerCase() && (l.customer||l.name||'').toLowerCase() === (s.customer||s.name||'').toLowerCase();
-    return emailMatch && (orderMatch || shipMatch || nameMatch);
-  });
-  // Drop server pseudo IDs when we have a matching local ticket within TTL
-  const acceptedServer = server.filter(s => isStrictId(s.id) || !hasLocalEquivalent(s));
-
-  // Persist pruned locals only (optional normalization of cache)
-  if(onlyLocal.length !== locals.length){ writeLocalTickets(onlyLocal); }
-
-  const merged = [...onlyLocal, ...acceptedServer];
-  merged.sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
-  return merged;
-}
-
 // Helpers to detect id shapes
 function isStrictVelId(id){ return /^VEL-\d{6}$/.test(String(id||'')); }
 function isPseudoId(id){ return /^T-/.test(String(id||'')); }
@@ -105,10 +39,8 @@ export async function loadTickets({ force=false }={}){
       : (data && Array.isArray(data.documents))
         ? data.documents.map(d => ({ document: d }))
         : (data ? [data] : []);
-  const list = arr.map(normalizeTicket).filter(Boolean);
-  setState({ tickets: list });
-  // If server returned no tickets, clear any local cached tickets to avoid showing phantom items
-  if(!list.length){ writeLocalTickets([]); }
+    const list = arr.map(normalizeTicket).filter(Boolean);
+    setState({ tickets: list });
   } catch (e){
     console.error('Failed to fetch tickets', e);
   } finally {
@@ -1071,75 +1003,24 @@ async function onSubmitCreateTicket(){
     linkedTickets: tickIds.map(id=> ({ ticketId: id }))
   };
 
-  // Optimistically create a local ticket and store to localStorage
-  const pending = normalizeTicket({
-    id: ticketId,
-    status,
-    priority,
-    title:'',
-    Name: name,
-    Email: email,
-    Phone: phone,
-    Category: category,
-    SourceChannel: sourceChannel,
-    linkedOrders: orderIds,
-    linkedShipments: shipIds,
-    linkedConversations: convIds,
-    linkedTickets: tickIds,
-    internalNote: internalNote,
-    createdAt: Date.now(), updatedAt: Date.now()
-  });
-  // Mark as local (not rendered, but useful internally)
-  pending._local = true;
-  addLocalTicket(pending);
-  updateArray('tickets', arr=> [pending, ...arr.filter(t=> (t.id||'') !== pending.id)]);
-
   await withButtonLoader(btn, async ()=>{
     try {
       const result = await api.createTicket(payload);
-      // Prefer server ticket if any
-      const created = Array.isArray(result) ? (result[0]||null) : (result || null);
-      const normalized = created ? normalizeTicket(created) : normalizeTicket({
-        id: ticketId, status:'open', priority:'normal', title:'', customer:name, email,
-        createdAt: Date.now(), updatedAt: Date.now()
-      });
-      if(normalized){
-        // If server didn't return a valid Ticket ID, keep the client-generated strict VEL-xxxxxx
-        if(!normalized.id || isPseudoId(normalized.id) || !isStrictVelId(normalized.id)){
-          normalized.id = ticketId;
-        }
-        // Ensure essential details are retained if server response lacks them
-        if(!normalized.customer && !normalized.name){ normalized.customer = name; }
-        if(!normalized.email){ normalized.email = email; }
-        if(!normalized.orderNo){ normalized.orderNo = orderNo || undefined; }
-        if(!normalized.shippingNo){ normalized.shippingNo = shipNo || undefined; }
-        if(!normalized.createdAt){ normalized.createdAt = Date.now(); }
-        if(!normalized.updatedAt){ normalized.updatedAt = normalized.createdAt; }
-        // Replace local pending with server-normalized and drop any server pseudo duplicates
-        updateArray('tickets', arr=> {
-          const cleaned = arr.filter(t=> {
-            const tid = String(t.id||'');
-            if(tid === ticketId) return false;
-            if(isPseudoId(tid)){
-              const emailMatch = (t.email||'').toLowerCase() === (email||'').toLowerCase();
-              const nameMatch = (t.customer||t.name||'').toLowerCase() === (name||'').toLowerCase();
-              const orderMatch = !!(orderNo && t.orderNo && String(orderNo)===String(t.orderNo));
-              const shipMatch = !!(shipNo && t.shippingNo && String(shipNo)===String(t.shippingNo));
-              const timeClose = Math.abs((t.createdAt||0) - (normalized.createdAt||Date.now())) < 5*60*1000;
-              if(emailMatch && timeClose && (orderMatch || shipMatch || nameMatch)) return false;
-            }
-            return true;
-          });
-          return [normalized, ...cleaned];
-        });
-        // Remove from local cache once server has accepted
-        removeLocalTicketById(ticketId);
+      // After successful creation, do a silent/overlay reload of tickets from webhook
+      const section = document.getElementById('view-tickets');
+      if(section) showLoader(section, 'overlay');
+      try {
+        await reloadTickets();
+        // Try to auto-select the newly created ticket
+        const created = (state.tickets||[]).find(t => String(t.id) === String(ticketId));
+        if(created){ setState({ selectedTicket: created }); }
+      } finally {
+        if(section) hideLoader(section, 'overlay');
       }
       closeCreateTicketModal();
     } catch(err){
       console.error('Failed to create ticket', err);
-      // Keep the local pending item in list and storage so it persists temporarily
-      alert('Ticket saved locally. Will sync when online.');
+      alert('Failed to create ticket. Please try again.');
     }
   }, 'Creating...');
 }
