@@ -18,7 +18,7 @@ export const ENDPOINTS = {
   ticketsUpdate: `${BASE_URL}/updatetickets`
 };
 
-export const BUSINESS_ID = 'velit-camping-2027';
+export const BUSINESS_ID = 'velit-camping-2031';
 
 export const API_KEY_HEADER = 'x-n8n-apiKey';
 export const API_KEY_VALUE = '2025@urikaDeep@km@lik$$'; // TODO: inject real key
