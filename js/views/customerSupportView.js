@@ -33,7 +33,39 @@ function normalizeFirestoreResponse(data) {
   const docs = Array.isArray(data) ? data : [data];
   
   return docs.map(item => {
-    // Handle both old flat structure and new Firestore document structure
+    // Helper to extract value from Firestore field type
+    const val = (field) => {
+      if (!field || typeof field !== 'object') return field;
+      if ('stringValue' in field) return field.stringValue;
+      if ('integerValue' in field) return String(field.integerValue);
+      if ('doubleValue' in field) return String(field.doubleValue);
+      if ('booleanValue' in field) return field.booleanValue;
+      if ('timestampValue' in field) return field.timestampValue;
+      if ('nullValue' in field) return null;
+      return field;
+    };
+    
+    // New format: fields are directly on the object with typed values
+    if (item.session_id || item.email || item.contact_id) {
+      // Generate conversation_id from contact_id or random if not available
+      const conversationId = val(item.contact_id) || Math.random().toString(36).substr(2, 9);
+      
+      return {
+        conversation_id: conversationId,
+        channel_type: val(item.channel_type) || '',
+        session_id: val(item.session_id) || '',
+        name: val(item.name) || '',
+        email: val(item.email) || '',
+        subject: val(item.subject) || '',
+        contact_id: val(item.contact_id) || '',
+        started_at: val(item.createdAt) || val(item.started_at),
+        updated_at: val(item.updatedAt) || val(item.updated_at),
+        status: val(item.status) || 'Unknown',
+        messages: [] // Messages will be fetched separately when conversation is selected
+      };
+    }
+    
+    // Old format: nested under document.fields
     if (item.document && item.document.fields) {
       const fields = item.document.fields;
       const docName = item.document.name || '';
@@ -41,20 +73,20 @@ function normalizeFirestoreResponse(data) {
       
       return {
         conversation_id: conversationId,
-        channel_type: fields.channel_type?.stringValue || '',
-        session_id: fields.session_id?.stringValue || '',
-        name: fields.name?.stringValue || '',
-        email: fields.email?.stringValue || '',
-        subject: fields.subject?.stringValue || '',
-        contact_id: fields.contact_id?.stringValue || '',
-        started_at: fields.started_at?.timestampValue || item.document.createTime,
-        updated_at: item.document.updateTime,
-        status: fields.status?.stringValue || 'Unknown',
+        channel_type: val(fields.channel_type) || '',
+        session_id: val(fields.session_id) || '',
+        name: val(fields.name) || '',
+        email: val(fields.email) || '',
+        subject: val(fields.subject) || '',
+        contact_id: val(fields.contact_id) || '',
+        started_at: val(fields.started_at) || val(fields.createdAt) || item.document.createTime,
+        updated_at: val(fields.updated_at) || val(fields.updatedAt) || item.document.updateTime,
+        status: val(fields.status) || 'Unknown',
         messages: [] // Messages will be fetched separately when conversation is selected
       };
     }
     
-    // Return as-is if already in flat structure (backward compatibility)
+    // Fallback: return as-is if already in flat structure (backward compatibility)
     return item;
   }).filter(Boolean);
 }
