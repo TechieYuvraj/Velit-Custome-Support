@@ -989,7 +989,7 @@ async function onSubmitCreateTicket(){
     Name: name,
     Email: email,
     Phone: phone,
-    internalNote: internalNote,
+    internalNote: internalNote ? `${new Date().toISOString()}:- ${internalNote}` : '',
     Ticket_id: ticketId,
     Status: status,
     Priority: priority,
@@ -1415,6 +1415,20 @@ async function onSubmitUpdateTicket(){
   const convIds = [...utSelectedConversationIds];
   const tickIds = [...utSelectedTicketIds];
 
+  // Find current ticket to get existing internal notes
+  const current = (state.tickets||[]).find(t=> t.id===id);
+  const existingNotes = current?.internalNotes || '';
+  
+  // Format new note with timestamp and append to existing
+  let updatedInternalNote = existingNotes;
+  if(internalNote) {
+    const timestamp = new Date().toISOString();
+    const formattedNewNote = `${timestamp}:- ${internalNote}`;
+    updatedInternalNote = existingNotes 
+      ? `${existingNotes}\n${formattedNewNote}` 
+      : formattedNewNote;
+  }
+
   const payload = {
     business_id: BUSINESS_ID,
     Name: name,
@@ -1427,14 +1441,13 @@ async function onSubmitUpdateTicket(){
     SourceChannel: sourceChannel,
     // Send full datetime for update timestamp
     updatedAt: new Date().toISOString(),
-    internalNote: internalNote,
+    internalNote: updatedInternalNote,
     linkedOrders: orderIds.map(v=> ({ orderId: v })),
     linkedShipments: shipIds.map(v=> ({ shipmentId: v })),
     linkedConversations: convIds.map(v=> ({ conversationId: v })),
     linkedTickets: tickIds.map(v=> ({ ticketId: v }))
   };
 
-  const current = (state.tickets||[]).find(t=> t.id===id);
   const creationId = current?.creationId;
 
   await withButtonLoader(btn, async ()=>{
@@ -1446,7 +1459,7 @@ async function onSubmitUpdateTicket(){
         status, priority,
         customer: name || t.customer,
         email: email || t.email,
-  internalNotes: internalNote || t.internalNotes,
+        internalNotes: updatedInternalNote || t.internalNotes,
         category, sourceChannel,
         linked: {
           ...t.linked,
