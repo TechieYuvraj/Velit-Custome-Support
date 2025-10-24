@@ -40,13 +40,20 @@ export async function openShippingLabelModal(email, orders = []){
   modal.style.display='flex';
   modal.innerHTML = `
     <div style="display:flex;flex-direction:column;width:90%;max-width:920px;max-height:80%;background:#fff;border-radius:14px;position:relative;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden;">
+      <!-- Fixed Header Section -->
+      <div style="display:flex;background:#f8f9fa;border-bottom:2px solid #e0e0e0;padding:16px 20px;position:sticky;top:0;z-index:10;">
+        <div style="flex:1;padding-right:10px;">
+          <h3 style="margin:0;font-size:17px;font-weight:600;color:#2e4d43;">Shipping Request</h3>
+        </div>
+        <div style="flex:1;padding-left:10px;display:flex;justify-content:space-between;align-items:center;border-left:1px solid #ddd;">
+          <h3 style="margin:0;font-size:17px;font-weight:600;color:#2e4d43;">Recipient Details</h3>
+          <button id="close-shipping-label-modal" aria-label="Close" style="font-size:24px;border:none;background:none;cursor:pointer;color:#666;line-height:1;padding:0;width:28px;height:28px;display:flex;align-items:center;justify-content:center;">&times;</button>
+        </div>
+      </div>
       <div style="display:flex;flex:1;min-height:0;">
         <!-- Left column: order + selects -->
         <div style="flex:1;padding:20px 18px 12px 22px;border-right:1px solid #eee;overflow-y:auto;">
-          <div id="modal-right-top-section">
-          <h3 style="margin:0 0 14px;font-size:16px;font-weight:600;">Shipping Request</h3>
-          </div>
-          <form id="modal-shipping-label-form" style="display:flex;flex-direction:column;height:100%;margin-top: 40px;">
+          <form id="modal-shipping-label-form" style="display:flex;flex-direction:column;height:100%;">
             <div class="form-group" style="background:#e8f5f0;padding:12px;border-radius:8px;border:2px solid #4a9d7a;margin-bottom:16px;">
               <label for="modal-service-type" style="display:block;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#2e4d43;margin-bottom:6px;">🚚 SHIPPING SERVICE TYPE:</label>
               <select id="modal-service-type" required style="padding:10px 12px;border:2px solid #4a9d7a;border-radius:8px;background:#ffffff;font-size:14px;font-weight:600;width:100%;cursor:pointer;box-sizing:border-box;color:#2e4d43;">
@@ -62,11 +69,7 @@ export async function openShippingLabelModal(email, orders = []){
         </div>
         <!-- Right column: name + address fields -->
         <div style="flex:1;padding:20px 24px 12px 24px;overflow-y:auto;">
-          <div id="modal-right-top-section">
-          <h3 style="margin:0 0 14px;font-size:16px;font-weight:600;">Recipient Details</h3>
-          <button id="close-shipping-label-modal" aria-label="Close">&times;</button>
-          </div>
-          <div id="modal-dynamic-address" style="margin-top:40px;"></div>
+          <div id="modal-dynamic-address"></div>
           <div id="modal-shipping-label-response" style="margin-top:10px;font-size:13px;"></div>
         </div>
       </div>
