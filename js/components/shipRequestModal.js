@@ -25,6 +25,14 @@ export function openShipRequestModal(prefillOrder){
         <div class="form-row"><label>Order No:</label><input type="text" id="sr-order-no" value="${order['Order Number']|| order.id || ''}" required /></div>
         <div class="form-row"><label>Email:</label><input type="email" id="sr-email" value="${order.Email || order.email || ''}" /></div>
 
+        <div class="form-row" style="background:#e8f5f0;padding:12px;border-radius:8px;border:2px solid #4a9d7a;margin:16px 0;">
+          <label style="display:block;font-size:.75rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#2e4d43;margin-bottom:6px;">🚚 SHIPPING SERVICE TYPE:</label>
+          <select id="sr-service-type" required style="padding:10px 12px;border:2px solid #4a9d7a;border-radius:8px;background:#ffffff;font-size:.85rem;font-weight:600;width:100%;cursor:pointer;box-sizing:border-box;color:#2e4d43;appearance:auto;">
+            <option value="FEDEX_GROUND">FEDEX GROUND</option>
+            <option value="UPS_GROUND">UPS GROUND</option>
+          </select>
+        </div>
+
         <h4 style="margin-top:12px">From</h4>
         <div class="form-row"><label>Preset:</label>${selectHtml('sr-from-address', FROM_ADDRESSES)}</div>
         <div class="form-row"><label>Full Name:</label><input type="text" id="sr-from-fullname" /></div>
@@ -37,16 +45,8 @@ export function openShipRequestModal(prefillOrder){
         <div class="form-row"><label>Zipcode:</label><input type="text" id="sr-from-zip" /></div>
         <div class="form-row"><label>Phone:</label><input type="text" id="sr-from-phone" /></div>
 
-        <h4 style="margin-top:16px;margin-bottom:12px;font-size:15px;font-weight:600;color:#2e4d43;border-bottom:2px solid #e0f0ea;padding-bottom:6px;">To (Recipient Details)</h4>
+        <h4 style="margin-top:16px;margin-bottom:12px;font-size:15px;font-weight:600;color:#2e4d43;">To (Recipient Details)</h4>
         
-        <div class="form-row" style="background:#e8f5f0;padding:10px;border-radius:8px;border:2px solid #4a9d7a;">
-          <label style="display:block;font-size:.75rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#2e4d43;margin-bottom:6px;">🚚 Shipping Service Type:</label>
-          <select id="sr-service-type" required style="padding:10px 12px;border:2px solid #4a9d7a;border-radius:8px;background:#ffffff;font-size:.85rem;font-weight:600;width:100%;cursor:pointer;box-sizing:border-box;color:#2e4d43;">
-            <option value="FEDEX_GROUND">FEDEX GROUND</option>
-            <option value="UPS_GROUND">UPS GROUND</option>
-          </select>
-        </div>
-
         <div class="form-row"><label>Full Name:</label><input type="text" id="sr-to-fullname" value="${order.name || order.Name || ''}" /></div>
         <div class="form-row"><label>Address 1:</label><input type="text" id="sr-to-address1" value="${order.address?.line1 || ''}" /></div>
         <div class="form-row"><label>Address 2:</label><input type="text" id="sr-to-address2" value="${order.address?.line2 || ''}" /></div>

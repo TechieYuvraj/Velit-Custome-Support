@@ -47,6 +47,13 @@ export async function openShippingLabelModal(email, orders = []){
           <h3 style="margin:0 0 14px;font-size:16px;font-weight:600;">Shipping Request</h3>
           </div>
           <form id="modal-shipping-label-form" style="display:flex;flex-direction:column;height:100%;margin-top: 40px;">
+            <div class="form-group" style="background:#e8f5f0;padding:12px;border-radius:8px;border:2px solid #4a9d7a;margin-bottom:16px;">
+              <label for="modal-service-type" style="display:block;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#2e4d43;margin-bottom:6px;">🚚 SHIPPING SERVICE TYPE:</label>
+              <select id="modal-service-type" required style="padding:10px 12px;border:2px solid #4a9d7a;border-radius:8px;background:#ffffff;font-size:14px;font-weight:600;width:100%;cursor:pointer;box-sizing:border-box;color:#2e4d43;">
+                <option value="FEDEX_GROUND">FEDEX GROUND</option>
+                <option value="UPS_GROUND">UPS GROUND</option>
+              </select>
+            </div>
             <div id="modal-order-no-group" class="form-group"></div>
             <div class="form-group" id="modal-from-address-group"></div>
             <div class="form-group" id="modal-product-dimensions-group"></div>
@@ -282,12 +289,17 @@ function buildShippingRequestPayload(order_no, email){
   })();
   const createdAtIso = new Date().toISOString();
   const shipDate = createdAtIso.split('T')[0];
+  
+  // Get service type from dropdown and calculate channel
+  const serviceType = getVal('modal-service-type') || 'FEDEX_GROUND';
+  const channel = serviceType === 'UPS_GROUND' ? 'GENERAL' : 'NJF';
+  
   return [{
     requestId,
     shipDate,
     createdAt: createdAtIso,
-    serviceType: 'FEDEX_GROUND',
-    channel: 'NJF',
+    serviceType: serviceType,
+    channel: channel,
     signature: 'NO_SIGNATURE_REQUIRED',
     reference: 'ref-example',
     from,
