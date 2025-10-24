@@ -1,5 +1,6 @@
 import { state, setState, updateArray, subscribe } from '../core/state.js';
 import { api } from '../core/api.js';
+import { showServerErrorModal } from '../utils/errorModal.js';
 
 let unsub = null;
 let initialized = false;
@@ -19,6 +20,7 @@ export async function loadShippingRequests({ force=false }={}){
     console.log('Shipping requests already initialized, skipping fetch');
     return; // fetch only once for now unless forced
   }
+  
   try {
     const sessionId = buildSessionId();
     const data = await api.fetchShippingRequests(sessionId, 'ShippingRequests');
@@ -27,40 +29,11 @@ export async function loadShippingRequests({ force=false }={}){
     const list = array.map(normalizeRequest).filter(Boolean);
     console.log('Final shipping requests list:', list);
     setState({ shippingRequests: list });
-    
-    // If no data, set some mock data for testing
-    if (!list.length) {
-      console.log('No shipping requests from API, setting mock data for testing');
-      const mockData = [
-        {
-          id: 'SR-001',
-          product: 'Rooftop AC Unit',
-          status: 'pending',
-          trackingNumber: 'TRK123456',
-          requestId: 'REQ-001',
-          orderId: 'ORD-12345',
-          url: '',
-          email: 'customer@example.com',
-          name: 'John Doe',
-          createdAt: Date.now() - 86400000 // 1 day ago
-        },
-        {
-          id: 'SR-002',
-          product: 'Gas Heater',
-          status: 'in_transit',
-          trackingNumber: 'TRK789012',
-          requestId: 'REQ-002',
-          orderId: 'ORD-67890',
-          url: '',
-          email: 'jane@example.com',
-          name: 'Jane Smith',
-          createdAt: Date.now() - 43200000 // 12 hours ago
-        }
-      ];
-      setState({ shippingRequests: mockData });
-    }
   } catch(err){
     console.error('Failed to load shipping requests', err);
+    setState({ shippingRequests: [] });
+    // Show error modal popup
+    showServerErrorModal('Failed to load shipping requests. Server not responding.', () => loadShippingRequests({ force: true }));
   } finally {
     initialized = true;
   }
@@ -172,6 +145,7 @@ export function renderShippingRequests(){
   const host = document.getElementById('shipping-request-cards');
   console.log('renderShippingRequests called, host element:', host);
   if(!host) return;
+  
   const list = filtered();
   console.log('Filtered shipping requests for rendering:', list);
   if(!list.length){ host.innerHTML = '<p class="empty">No shipping requests found.</p>'; return; }

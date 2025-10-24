@@ -3,6 +3,7 @@ import { state, setState } from '../core/state.js';
 import { formatDate, extractNameFromEmail } from '../utils/format.js';
 import { showLoader, hideLoader, withButtonLoader } from '../utils/loader.js';
 import { BUSINESS_ID } from '../config/endpoints.js';
+import { showServerErrorModal } from '../utils/errorModal.js';
 
 export function attachConversationListHandlers(){
   document.addEventListener('click',(e)=>{
@@ -39,6 +40,15 @@ async function selectConversation(id, type){
   } catch (err) {
     console.warn('Failed to load messages for conversation:', id, err);
     conv.messages = [];
+    // Show error modal popup
+    showServerErrorModal('Failed to load conversation messages. Server not responding.', async () => {
+      const conversationId = conv.conversation_id || conv.session_id || id;
+      const messages = await fetchConversationMessages(conversationId);
+      conv.messages = messages;
+      setCachedMessages(conversationId, messages);
+      setState({ selectedConversation: conv });
+      renderConversationDetail(conv, type);
+    });
   }
   
   setState({ selectedConversation: conv });

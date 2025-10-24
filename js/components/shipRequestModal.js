@@ -37,7 +37,16 @@ export function openShipRequestModal(prefillOrder){
         <div class="form-row"><label>Zipcode:</label><input type="text" id="sr-from-zip" /></div>
         <div class="form-row"><label>Phone:</label><input type="text" id="sr-from-phone" /></div>
 
-        <h4 style="margin-top:12px">To</h4>
+        <h4 style="margin-top:16px;margin-bottom:12px;font-size:15px;font-weight:600;color:#2e4d43;border-bottom:2px solid #e0f0ea;padding-bottom:6px;">To (Recipient Details)</h4>
+        
+        <div class="form-row" style="background:#e8f5f0;padding:10px;border-radius:8px;border:2px solid #4a9d7a;">
+          <label style="display:block;font-size:.75rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#2e4d43;margin-bottom:6px;">🚚 Shipping Service Type:</label>
+          <select id="sr-service-type" required style="padding:10px 12px;border:2px solid #4a9d7a;border-radius:8px;background:#ffffff;font-size:.85rem;font-weight:600;width:100%;cursor:pointer;box-sizing:border-box;color:#2e4d43;">
+            <option value="FEDEX_GROUND">FEDEX GROUND</option>
+            <option value="UPS_GROUND">UPS GROUND</option>
+          </select>
+        </div>
+
         <div class="form-row"><label>Full Name:</label><input type="text" id="sr-to-fullname" value="${order.name || order.Name || ''}" /></div>
         <div class="form-row"><label>Address 1:</label><input type="text" id="sr-to-address1" value="${order.address?.line1 || ''}" /></div>
         <div class="form-row"><label>Address 2:</label><input type="text" id="sr-to-address2" value="${order.address?.line2 || ''}" /></div>
@@ -111,6 +120,11 @@ async function handleSubmit(e){
   const prodKey = document.getElementById('sr-product-dim').value.trim();
   const fromKey = document.getElementById('sr-from-address').value.trim();
   const note = document.getElementById('sr-note').value.trim();
+  const serviceType = document.getElementById('sr-service-type').value.trim();
+  
+  // Set channel based on service type
+  const channel = serviceType === 'UPS_GROUND' ? 'GENERAL' : 'NJF';
+  
   statusMsg.textContent='';
 
   // Prevent duplicate shipping requests for same order
@@ -172,8 +186,8 @@ async function handleSubmit(e){
     requestId,
     shipDate,
     createdAt: createdAtIso,
-    serviceType: 'FEDEX_GROUND',
-    channel: 'NJF',
+    serviceType: serviceType,
+    channel: channel,
     signature: 'NO_SIGNATURE_REQUIRED',
     reference: 'ref-example',
     note,

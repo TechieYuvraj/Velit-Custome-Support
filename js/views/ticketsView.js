@@ -2,6 +2,7 @@ import { state, setState, subscribe, updateArray } from '../core/state.js';
 import { api } from '../core/api.js';
 import { BUSINESS_ID } from '../config/endpoints.js';
 import { showLoader, hideLoader, withButtonLoader } from '../utils/loader.js';
+import { showServerErrorModal } from '../utils/errorModal.js';
 
 let unsub = null;
 let initialized = false;
@@ -43,6 +44,9 @@ export async function loadTickets({ force=false }={}){
     setState({ tickets: list });
   } catch (e){
     console.error('Failed to fetch tickets', e);
+    setState({ tickets: [] });
+    // Show error modal popup
+    showServerErrorModal('Failed to load tickets. Server not responding.', () => loadTickets({ force: true }));
   } finally {
     initialized = true;
   }
@@ -84,18 +88,23 @@ function normalizeTicket(t){
       if('nullValue' in node) return null;
       return undefined;
     };
-    const createdAt = doc.createTime ? Date.parse(doc.createTime) : undefined;
-    const updatedAt = doc.updateTime ? Date.parse(doc.updateTime) : undefined;
+    const createdAt = doc.createTime ? Date.parse(doc.createTime) : (val(f.createdAt) ? Date.parse(val(f.createdAt)) : undefined);
+    const updatedAt = doc.updateTime ? Date.parse(doc.updateTime) : (val(f.updatedAt) ? Date.parse(val(f.updatedAt)) : undefined);
   const creationId = typeof doc.name === 'string' ? String(doc.name).split('/').pop() : undefined;
     const parseIds = (s)=> (typeof s === 'string' ? s.split(',').map(x=>x.trim()).filter(Boolean) : []);
-  // Read status/priority/title if provided in Firestore fields (support lower/Title case)
+  // Read status/priority/title/category/source/phone/internalNote if provided in Firestore fields
   const statusVal = (val(f.status) || val(f.Status) || 'open');
   const priorityVal = (val(f.priority) || val(f.Priority) || 'normal');
   const titleVal = (val(f.title) || val(f.Subject) || '');
+  const categoryVal = (val(f.category) || val(f.Category) || '');
+  const sourceChannelVal = (val(f.sourceChannel) || val(f.SourceChannel) || 'email');
+  const phoneVal = (val(f.phone) || val(f.Phone) || '');
+  const internalNoteVal = (val(f.internalNote) || val(f.InternalNote) || '');
     // Build a flat object using expected keys
     const flat = {
       Name: val(f.Name),
       Email: val(f.Email),
+      Phone: phoneVal,
       Ticket_id: val(f.Ticket_id) || val(f.TicketId),
       Order_no: val(f.Order_no) || val(f.LinkedOrderId),
       Shipping_no: val(f.Shipping_no) || val(f.LinkedShippingId),
@@ -103,6 +112,9 @@ function normalizeTicket(t){
       LinkedShippingId: val(f.LinkedShippingId),
       LinkedConversationId: val(f.LinkedConversationId),
       LinkedTicketId: val(f.LinkedTicketId),
+      Category: categoryVal,
+      SourceChannel: sourceChannelVal,
+      internalNote: internalNoteVal,
       timestamp: val(f.timestamp),
       createdAt, updatedAt,
       _linked: {
@@ -118,8 +130,12 @@ function normalizeTicket(t){
       id: flat.Ticket_id,
       name: flat.Name,
       email: flat.Email,
+      phone: flat.Phone,
       orderNo: flat.Order_no,
       shippingNo: flat.Shipping_no,
+      category: flat.Category,
+      sourceChannel: flat.SourceChannel,
+      internalNotes: flat.internalNote,
       createdAt: flat.timestamp || flat.createdAt || Date.now(),
       updatedAt: flat.timestamp || flat.updatedAt || Date.now(),
       creationId,
@@ -146,6 +162,9 @@ function normalizeTicket(t){
     title: t.title || t.subject || t.Subject || '',
     customer: t.customer || t.name || t.Name || t.Customer || '',
     email: t.email || t.Email || '',
+    phone: t.phone || t.Phone || '',
+    category: t.category || t.Category || '',
+    sourceChannel: t.sourceChannel || t.SourceChannel || 'email',
     createdAt: t.createdAt || t.Created || t.Time || Date.now(),
     updatedAt: t.updatedAt || t.Updated || t.lastUpdated || Date.now(),
     creationId: t.creationId,
@@ -235,6 +254,61 @@ export function renderTicketDetail(ticket){
     host.innerHTML = `<div class="detail-placeholder"><i class="fas fa-ticket"></i><p>Select a ticket to view details</p></div>`;
     return;
   }
+  
+  // Parse and format internal notes
+  const formatInternalNotes = (notes) => {
+    if(!notes || !notes.trim()) return '';
+    
+    // Split notes by newline to get individual entries
+    const noteEntries = notes.split('\n').filter(n => n.trim());
+    
+    // Format each entry
+    const formattedEntries = noteEntries.map(entry => {
+      // Match pattern: "timestamp:- note text"
+      const match = entry.match(/^(.+?):-\s*(.+)$/);
+      if(match) {
+        const timestamp = match[1].trim();
+        const noteText = match[2].trim();
+        
+        // Parse and format timestamp
+        let formattedDate = timestamp;
+        try {
+          const date = new Date(timestamp);
+          formattedDate = date.toLocaleString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        } catch(e) {
+          // Keep original if parsing fails
+        }
+        
+        return `<div class="note-entry">
+          <div class="note-timestamp"><i class="fas fa-clock"></i> ${escapeHtml(formattedDate)}</div>
+          <div class="note-text">${escapeHtml(noteText)}</div>
+        </div>`;
+      }
+      // Fallback for notes without timestamp format
+      return `<div class="note-entry">
+        <div class="note-text">${escapeHtml(entry)}</div>
+      </div>`;
+    }).join('');
+    
+    return `<div class="internal-notes-section">
+      <div class="section-header">
+        <i class="fas fa-sticky-note"></i>
+        <h4>Internal Notes</h4>
+      </div>
+      <div class="notes-container">
+        ${formattedEntries}
+      </div>
+    </div>`;
+  };
+  
+  const internalNotesHtml = formatInternalNotes(ticket.internalNotes);
+  
   // We remove legacy cards, conversation and internal notes sections.
   // Render 4 columns for linked nuggets instead.
   host.innerHTML = `
@@ -255,6 +329,7 @@ export function renderTicketDetail(ticket){
           </div>
         </div>
       </div>
+      ${internalNotesHtml}
       <div class="ticket-body">
         ${renderLinkedNuggetColumns(ticket)}
       </div>
@@ -1089,8 +1164,14 @@ function ensureUpdateTicketModal(){
             </div>
           </div>
           <div class="form-group">
-            <label>Internal Note</label>
-            <textarea id="ut-notes" class="form-control" placeholder="Add internal note..." style="min-height:70px"></textarea>
+            <label>Previous Internal Notes</label>
+            <div id="ut-old-notes" class="old-notes-display" style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:6px;padding:10px;max-height:120px;overflow-y:auto;font-size:0.85rem;color:#495057;margin-bottom:10px;">
+              <em style="color:#6c757d;">No previous notes</em>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Add New Internal Note</label>
+            <textarea id="ut-notes" class="form-control" placeholder="Type new note here..." style="min-height:70px"></textarea>
           </div>
           <div class="form-group">
             <label>Linked Orders</label>
@@ -1155,8 +1236,40 @@ export function openUpdateTicketModal(ticket){
   document.getElementById('ut-name').value = utSelectedName;
   document.getElementById('ut-phone').value = ticket.phone || '';
   document.getElementById('ut-ticket-id').value = ticket.id || '';
+  
+  // Display old notes as read-only formatted text
+  const oldNotesContainer = document.getElementById('ut-old-notes');
+  if(oldNotesContainer) {
+    const oldNotes = ticket.internalNotes || '';
+    if(oldNotes.trim()) {
+      // Parse and format old notes
+      const noteEntries = oldNotes.split('\n').filter(n => n.trim());
+      const formattedNotes = noteEntries.map(entry => {
+        const match = entry.match(/^(.+?):-\s*(.+)$/);
+        if(match) {
+          const timestamp = match[1].trim();
+          const noteText = match[2].trim();
+          let formattedDate = timestamp;
+          try {
+            const date = new Date(timestamp);
+            formattedDate = date.toLocaleString(undefined, {
+              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+          } catch(e) { /* keep original */ }
+          return `<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #e9ecef;"><strong style="color:#6c757d;font-size:0.75rem;">${escapeHtml(formattedDate)}</strong><div style="margin-top:3px;">${escapeHtml(noteText)}</div></div>`;
+        }
+        return `<div style="margin-bottom:8px;">${escapeHtml(entry)}</div>`;
+      }).join('');
+      oldNotesContainer.innerHTML = formattedNotes;
+    } else {
+      oldNotesContainer.innerHTML = '<em style="color:#6c757d;">No previous notes</em>';
+    }
+  }
+  
+  // Clear the new note textarea
   const utNotes = document.getElementById('ut-notes');
-  if(utNotes) utNotes.value = ticket.internalNotes || '';
+  if(utNotes) utNotes.value = '';
+  
   document.getElementById('ut-status').value = (ticket.status||'open');
   document.getElementById('ut-priority').value = (ticket.priority||'normal');
   document.getElementById('ut-category').value = ticket.category || '';
@@ -1419,13 +1532,14 @@ async function onSubmitUpdateTicket(){
   const current = (state.tickets||[]).find(t=> t.id===id);
   const existingNotes = current?.internalNotes || '';
   
-  // Format new note with timestamp and append to existing
+  // Optimized format: NEW note first, then all OLD notes (only if new note exists)
   let updatedInternalNote = existingNotes;
   if(internalNote) {
     const timestamp = new Date().toISOString();
     const formattedNewNote = `${timestamp}:- ${internalNote}`;
-    updatedInternalNote = existingNotes 
-      ? `${existingNotes}\n${formattedNewNote}` 
+    // Put new note FIRST, followed by existing notes (if any)
+    updatedInternalNote = existingNotes.trim() 
+      ? `${formattedNewNote}\n${existingNotes}` 
       : formattedNewNote;
   }
 

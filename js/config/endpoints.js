@@ -36,7 +36,7 @@ export const FROM_ADDRESS_BOOK = [
     city: 'Seatle',
     state: 'WA',
     country: 'USA',
-    zipCode: '12345',
+    zipCode: '98101',
     phoneNumber: '1234567890'
   },
   {
@@ -47,7 +47,7 @@ export const FROM_ADDRESS_BOOK = [
     city: 'Seatle',
     state: 'WA',
     country: 'USA',
-    zipCode: '12345',
+    zipCode: '98101',
     phoneNumber: '1234567890'
   }
 ];

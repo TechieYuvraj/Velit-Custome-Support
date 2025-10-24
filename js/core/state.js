@@ -4,7 +4,6 @@ export const state = {
   emailConversations: [],
   crmConversations: [],
   orders: [],
-  ordersSource: 'unknown', // 'live' | 'mock' | 'unknown'
   shippingRequests: [],
   tickets: [],
   selectedTicket: null,

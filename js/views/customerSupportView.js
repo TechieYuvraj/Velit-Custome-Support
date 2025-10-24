@@ -2,6 +2,7 @@ import { state, setState } from '../core/state.js';
 import { api } from '../core/api.js';
 import { formatDate, extractNameFromEmail } from '../utils/format.js';
 import { showLoader, hideLoader } from '../utils/loader.js';
+import { showServerErrorModal } from '../utils/errorModal.js';
 
 const DEFAULT_FROM = '2024-01-01T00:00:00Z';
 const DEFAULT_TO = '2025-09-16T23:59:59Z';
@@ -24,6 +25,8 @@ export async function loadCustomerSupport(fromDateISO = DEFAULT_FROM, toDateISO 
   } catch(err){
     console.warn('Failed to load conversations', err);
     showError();
+    // Show error modal popup
+    showServerErrorModal('Failed to load customer support conversations. Server not responding.', () => loadCustomerSupport(fromDateISO, toDateISO));
   }
 }
 

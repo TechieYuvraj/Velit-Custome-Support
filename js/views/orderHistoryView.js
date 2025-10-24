@@ -3,21 +3,12 @@ import { openShippingLabelModal } from '../components/shippingLabelModal.js';
 import { api } from '../core/api.js';
 import { openShipRequestModal } from '../components/shipRequestModal.js';
 import { withButtonLoader } from '../utils/loader.js';
-
-// Placeholder mock orders until endpoint confirmed
-function mockOrders(){
-  // Simplified mock matching new remote shape
-  return [
-    { id: '1010', name: 'Alice Lee', email: 'alice@example.com', phone: '1112223333', address: { line1:'123 Pine St', line2:'', city:'Seattle', state:'WA', zip:'98101', country:'United States' } },
-    { id: '1009', name: 'Bob Martin', email: 'bob@example.com', phone: '2223334444', address: { line1:'88 Sunset Blvd', line2:'Suite 5', city:'Los Angeles', state:'CA', zip:'90001', country:'United States' } },
-    { id: '1008', name: 'Chloe Green', email: 'chloe@example.com', phone: '3334445555', address: { line1:'45 Green Way', line2:'', city:'Portland', state:'OR', zip:'97201', country:'United States' } }
-  ];
-}
+import { showServerErrorModal } from '../utils/errorModal.js';
 
 export async function loadOrders({ retry=false }={}){
   const sessionId = buildSessionId();
   let remote = [];
-  let usedSource = 'mock';
+  
   try {
     const data = await api.fetchOrderHistory(sessionId, 'Order History');
     if(Array.isArray(data)) {
@@ -29,39 +20,18 @@ export async function loadOrders({ retry=false }={}){
       remote = [data];
     }
   } catch(err){
-    if(retry) console.warn('Retry failed for order history', err); else console.warn('Order history fetch failed, using mock data', err);
+    console.error('Order history fetch failed', err);
+    // Show error modal popup
+    showServerErrorModal('Failed to load order history. Server not responding.', () => loadOrders({ retry: true }));
   }
+  
   let normalized = [];
   if(remote && remote.length){
     normalized = remote.map(r=> normalizeRemoteOrder(r)).filter(Boolean);
   }
-  if(normalized.length){
-    usedSource = 'live';
-  } else {
-    normalized = mockOrders();
-    usedSource = 'mock';
-  }
-  setState({ orders: normalized, ordersSource: usedSource });
+  
+  setState({ orders: normalized });
   renderOrderCards();
-  updateOrdersMeta();
-}
-
-function updateOrdersMeta(){
-  const metaHost = document.getElementById('order-source-indicator');
-  if(!metaHost) return;
-  const source = state.ordersSource;
-  const label = source==='live' ? 'Live Data' : (source==='mock' ? 'Fallback (Mock)' : '—');
-  const color = source==='live' ? '#2e7d32' : (source==='mock' ? '#b26a00' : '#666');
-  metaHost.innerHTML = `<span style="color:${color};font-weight:600;">${label}</span>` +
-    (source!=='live' ? ' <button id="retry-orders" class="mini-btn" style="margin-left:8px;">Retry</button>' : '');
-  const retryBtn = document.getElementById('retry-orders');
-  if(retryBtn){
-    retryBtn.addEventListener('click', async ()=>{
-      await withButtonLoader(retryBtn, async () => {
-        await loadOrders({ retry:true });
-      }, 'Retrying...');
-    });
-  }
 }
 
 function buildSessionId(){
@@ -154,6 +124,7 @@ function filteredOrders(){
 export function renderOrderCards(){
   const host = document.getElementById('order-cards');
   if(!host) return;
+  
   const list = filteredOrders();
   if(!list.length){ host.innerHTML='<p class="empty">No orders found.</p>'; return; }
   host.innerHTML = list.map(o=> orderCard(o)).join('');
