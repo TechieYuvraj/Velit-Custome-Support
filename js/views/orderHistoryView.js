@@ -2,8 +2,13 @@ import { state, setState } from '../core/state.js';
 import { openShippingLabelModal } from '../components/shippingLabelModal.js';
 import { api } from '../core/api.js';
 import { openShipRequestModal } from '../components/shipRequestModal.js';
-import { withButtonLoader } from '../utils/loader.js';
 import { showServerErrorModal } from '../utils/errorModal.js';
+import { formatDate } from '../utils/format.js';
+
+const escapeHtml = (str = '') => {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return String(str).replace(/[&<>"']/g, ch => map[ch] || ch);
+};
 
 export async function loadOrders({ retry=false }={}){
   const sessionId = buildSessionId();
@@ -53,6 +58,8 @@ function normalizeRemoteOrder(r){
     const name = sval(f.shipping_name) || sval(f.name) || '';
     const email = sval(f.email) || '';
     const phone = (sval(f.phone) || '').toString();
+    const productName = sval(f.product_name) || sval(f.productName) || sval(f.product) || '';
+    const orderDateRaw = tval(f.order_date) || tval(f.orderDate) || tval(f.createdAt) || sval(f.order_date) || sval(f.orderDate) || doc.createTime;
     const address = {
       line1: sval(f.shipping_address_1) || sval(f.address1) || sval(f.address_1) || '',
       line2: sval(f.shipping_address_2) || sval(f.address2) || sval(f.address_2) || '',
@@ -63,7 +70,7 @@ function normalizeRemoteOrder(r){
     };
     // Optional metadata (not currently displayed)
     const createdAt = tval(f.createdAt) || doc.createTime;
-    return { id: String(id), name, email, phone, address, createdAt };
+    return { id: String(id), name, email, phone, address, createdAt, orderDate: orderDateRaw, productName };
   }
   // Backward-compatible flat/canonical structures
   const id = r['Order Number'] || r.order_number || r.order_no || r.id;
@@ -71,6 +78,8 @@ function normalizeRemoteOrder(r){
   const name = r['Shipping Name'] || r.name || '';
   const email = r.Email || r.email || '';
   const phone = (r.Phone || r.phone || '').toString();
+  const productName = r['Product Name'] || r.product_name || r.productName || r.Product || r.product || '';
+  const orderDateRaw = r['Order Date'] || r.order_date || r.orderDate || r.createdAt || r.created_at || '';
   const address = {
     line1: r['Shipping Address 1'] || r.address1 || r.address_1 || '',
     line2: r['Shipping Address 2'] || r.address2 || r.address_2 || '',
@@ -79,7 +88,7 @@ function normalizeRemoteOrder(r){
     zip: r['Shipping Zipcode'] || r.zip || r.zipcode || '',
     country: r['Shipping Country'] || r.country || ''
   };
-  return { id: String(id), name, email, phone, address };
+  return { id: String(id), name, email, phone, address, createdAt: r.createdAt || r.created_at || '', orderDate: orderDateRaw, productName };
 }
 
 export function attachOrderHistoryHandlers(){
@@ -116,7 +125,7 @@ function filteredOrders(){
   // Descending by fallback index (most recent first)
   list.reverse();
   if(term){
-    list = list.filter(o=> [o.id,o.email,o.name,o.phone,o.address.line1,o.address.city,o.address.state,o.address.zip].join(' ').toLowerCase().includes(term));
+  list = list.filter(o=> [o.id,o.email,o.name,o.phone,o.productName,o.address.line1,o.address.city,o.address.state,o.address.zip].join(' ').toLowerCase().includes(term));
   }
   return list;
 }
@@ -137,10 +146,17 @@ function multilineAddress(addr){
 function orderCard(o){
   const addr = multilineAddress(o.address).replace(/\n/g,'<br>');
   const exists = (state.shippingRequests||[]).some(r=> String(r.orderId) === String(o.id));
+  const productName = o.productName || '—';
+  const dateSource = o.orderDate || o.createdAt;
+  const formattedDate = dateSource ? formatDate(dateSource) : '';
+  const orderDate = formattedDate && formattedDate !== 'N/A' ? formattedDate : '';
+  const orderDateBadge = orderDate ? `<span class="order-date">${escapeHtml(orderDate)}</span>` : '';
   return `<div class="order-card" data-order-id="${o.id}">
     <div class="order-header">
       <h4>${o.id}</h4>
+      ${orderDateBadge}
     </div>
+    <div class="order-product"><span class="label">Product</span><span class="value">${productName ? escapeHtml(productName) : '—'}</span></div>
     <div class="order-meta">
       <div><strong>${o.name || '—'}</strong><br><span class="email">${o.email || '—'}</span>${o.phone? `<br><span class="phone">${o.phone}</span>`:''}</div>
     </div>

@@ -1125,6 +1125,10 @@ select#shipping-status-filter {padding:10px 14px;border:1px solid #b8dacf;border
 .order-card:hover {box-shadow:0 6px 22px rgba(0,0,0,.12);transform:translateY(-4px);} 
 .order-header {display:flex;align-items:center;justify-content:space-between;}
 .order-header h4 {font-size:.95rem;margin:0;color:#194b3b;font-weight:600;}
+.order-header .order-date {font-size:.65rem;color:#4c6159;font-weight:600;background:#e1f3ec;border-radius:6px;padding:4px 6px;}
+.order-product {display:flex;justify-content:space-between;align-items:center;background:#f5faf8;border:1px dashed #cfe2dc;border-radius:8px;padding:6px 8px;font-size:.7rem;gap:10px;}
+.order-product .label {text-transform:uppercase;letter-spacing:.45px;font-weight:700;color:#2e4d43;font-size:.65rem;}
+.order-product .value {flex:1;text-align:right;font-weight:600;color:#194b3b;}
 .order-header .lines {font-size:.65rem;text-transform:uppercase;letter-spacing:.5px;background:#e0f4ef;color:#194b3b;padding:4px 6px;border-radius:6px;font-weight:600;}
 .order-meta {display:flex;justify-content:space-between;align-items:flex-start;gap:12px;font-size:.75rem;color:#2e4d43;}
 .order-meta .amount {font-weight:700;color:#194b3b;font-size:.85rem;}
@@ -1294,7 +1298,9 @@ select#shipping-status-filter {padding:10px 14px;border:1px solid #b8dacf;border
 .linked-sections {grid-template-columns:1fr 1fr;gap:10px}
 .linked-block {display:flex;flex-direction:column;gap:8px}
 .linked-title {font-size:.8rem;color:#275f4e;font-weight:600}
-.linked-card {background:#f8fbfa;border:1px solid #d7e6e1;border-radius:10px;padding:10px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.linked-card {background:#f8fbfa;border:1px solid #d7e6e1;border-radius:10px;padding:10px;box-shadow:0 1px 4px rgba(0,0,0,.04);transition:.18s box-shadow,.18s transform}
+.linked-card[data-type] {cursor:pointer}
+.linked-card[data-type]:hover {box-shadow:0 6px 18px rgba(0,0,0,.12);transform:translateY(-2px)}
 .linked-card .lc-header {display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .linked-card .lc-title {font-weight:600;color:#194b3b;display:flex;align-items:center;gap:6px}
 .linked-card .lc-meta {font-size:.75rem;color:#64748b}
@@ -1303,6 +1309,7 @@ select#shipping-status-filter {padding:10px 14px;border:1px solid #b8dacf;border
 .linked-card .lc-row .k {color:#475569;font-size:.8rem}
 .linked-card .lc-row .v {color:#111827;font-weight:500}
 .linked-card .lc-tags {display:flex;gap:6px}
+.linked-card-stack {display:flex;flex-direction:column;gap:10px}
 .order-card {border-left:4px solid #275f4e}
 .ship-card {border-left:4px solid #385a4f}
 .lc-note {margin-top:6px;background:#fff;border:1px dashed #cfe2dc;border-radius:8px;padding:8px;color:#194b3b}
@@ -1321,7 +1328,7 @@ select#shipping-status-filter {padding:10px 14px;border:1px solid #b8dacf;border
 .nugget {display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:#eef6f4;border:1px solid #cfe2dc;color:#194b3b;font-size:.75rem;cursor:pointer}
 .nugget:hover {background:#e3f0ec}
 .detail-grid {display:grid;grid-template-columns:1fr;gap:8px}
-.nugget-columns {grid-template-columns:repeat(4,1fr);gap:12px;margin-top:10px}
+.nugget-columns {display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:10px}
 .nugget-col .linked-title {font-weight:600;color:#23493b;margin-bottom:6px}
 @media (max-width: 1100px){ .nugget-columns {grid-template-columns:repeat(2,1fr);} }
 @media (max-width: 640px){ .nugget-columns {grid-template-columns:1fr;} }

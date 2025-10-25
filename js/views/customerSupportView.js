@@ -110,13 +110,12 @@ export function renderCRMList(){
   host.innerHTML = list.map(crmItemHtml).join('');
 }
 
-// Email row: Name, Email, Subject, Status, Create Time, Update Time
+// Email row: Name, Email, Subject, Create Time, Update Time
 function emailItemHtml(conv){
   const name = conv.name || extractNameFromEmail(conv.email || '') || 'Unknown';
   const email = conv.email || '';
   const createDate = formatDate(conv.started_at);
   const updateDate = formatDate(conv.updated_at);
-  const status = (conv.status || '').trim();
   const subject = conv.subject || 'No subject';
   
   return `<div class="conversation-item" data-id="${conv.conversation_id}" data-type="email">
@@ -127,7 +126,6 @@ function emailItemHtml(conv){
         <div class="conversation-subject" style="margin-top:4px;font-size:12px;color:#333;">${escapeHtml(subject)}</div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-        <span class="conversation-status status-${status.toLowerCase()||'na'}">${escapeHtml(status)}</span>
         <div class="conversation-dates" style="font-size:10px;color:#567;text-align:right;line-height:1.3;">
           <div>Created: ${createDate}</div>
           <div>Updated: ${updateDate}</div>

@@ -355,15 +355,17 @@ function computeLinked(ticket){
 }
 
 function orderCard(o){
-  const created = o.createdAt ? `Created: ${escapeHtml(formatDate(o.createdAt))}` : '';
-  return `<div class="linked-card order-card">
+  const product = o.productName || o.product || '';
+  const orderDateSource = o.orderDate || o.createdAt;
+  const formattedDate = orderDateSource ? formatDate(orderDateSource) : '';
+  const orderDate = formattedDate && formattedDate !== 'N/A' ? formattedDate : '';
+  return `<div class="linked-card order-card" data-type="order" data-id="${escapeHtml(String(o.id))}">
     <div class="lc-header">
       <div class="lc-title"><i class="fas fa-receipt"></i> Order #${escapeHtml(String(o.id))}</div>
-      ${created ? `<div class="lc-meta">${created}</div>`:''}
+      ${orderDate ? `<div class="lc-meta">Order Date: ${escapeHtml(orderDate)}</div>`:''}
     </div>
     <div class="lc-body">
-      <div class="lc-row"><span class="k">Name</span><span class="v">${escapeHtml(o.name||'')}</span></div>
-      <div class="lc-row"><span class="k">Email</span><span class="v">${escapeHtml(o.email||'')}</span></div>
+      <div class="lc-row"><span class="k">Product</span><span class="v">${escapeHtml(product || '—')}</span></div>
     </div>
   </div>`;
 }
@@ -404,16 +406,18 @@ function renderLinkedNuggets(t){
 }
 
 function renderLinkedNuggetColumns(t){
+  const { orders } = computeLinked(t);
   const mkChips = (type, arr)=>{
     const ids = Array.isArray(arr) ? arr : (typeof arr==='string' ? arr.split(',').map(x=>x.trim()).filter(Boolean) : []);
     if(!ids.length) return '<div class="empty">None</div>';
     return `<div class="nugget-wrap">${ids.map(id=> `<span class="nugget" data-type="${type}" data-id="${escapeHtml(String(id))}">${escapeHtml(String(id))}</span>`).join('')}</div>`;
   };
+  const orderCards = orders.length ? `<div class="linked-card-stack">${orders.map(orderCard).join('')}</div>` : '<div class="empty">None</div>';
   return `
     <div class="nugget-columns">
       <div class="nugget-col">
         <div class="linked-title">Linked Orders</div>
-        ${mkChips('order', t.linked?.orders)}
+        ${orderCards}
       </div>
       <div class="nugget-col">
         <div class="linked-title">Linked Shipments</div>
@@ -434,7 +438,7 @@ function renderLinkedNuggetColumns(t){
 function bindNuggetClicks(){
   const host = document.getElementById('ticket-detail');
   if(!host) return;
-  host.querySelectorAll('.nugget').forEach(el=>{
+  host.querySelectorAll('.nugget, .linked-card[data-type]').forEach(el=>{
     el.addEventListener('click', ()=>{
       const type = el.getAttribute('data-type');
       const id = el.getAttribute('data-id');
