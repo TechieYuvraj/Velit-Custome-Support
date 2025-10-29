@@ -706,10 +706,34 @@ export function openCreateTicketModal(){
   ensureCreateTicketModal();
   const modal = document.getElementById('create-ticket-modal');
   if(modal){
+    // Reset all form fields
+    const fieldsToReset = [
+      'ct-email', 'ct-name', 'ct-phone', 'ct-category', 'ct-source', 'ct-notes', 
+      'ct-priority', 'ct-status',
+      'ct-order-search', 'ct-ship-search', 'ct-conv-search', 'ct-tick-search'
+    ];
+    fieldsToReset.forEach(id => {
+      const field = document.getElementById(id);
+      if(field) {
+        if(field.tagName === 'SELECT') {
+          field.selectedIndex = 0; // Reset to first option
+        } else {
+          field.value = ''; // Clear input/textarea
+        }
+      }
+    });
+
+    // Clear multi-select results
+    ['ct-order-selected', 'ct-ship-selected', 'ct-conv-selected', 'ct-tick-selected'].forEach(id => {
+      const container = document.getElementById(id);
+      if(container) container.innerHTML = '';
+    });
+
     // Set default Ticket ID as max existing + 1 (preserve prefix/padding if possible)
     const nextId = computeNextTicketId();
     const idInput = document.getElementById('ct-ticket-id');
     if(idInput) idInput.value = nextId;
+    
     modal.style.display='flex';
   }
 }

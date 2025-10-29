@@ -1,6 +1,7 @@
 import { state, setState, updateArray, subscribe } from '../core/state.js';
 import { api } from '../core/api.js';
 import { showServerErrorModal } from '../utils/errorModal.js';
+import { openShipRequestModal } from '../components/shipRequestModal.js';
 
 let unsub = null;
 let initialized = false;
@@ -139,6 +140,15 @@ export function attachShippingRequestsHandlers(){
   if(search) search.addEventListener('input', ()=> renderShippingRequests());
   const statusSel = document.getElementById('shipping-status-filter');
   if(statusSel) statusSel.addEventListener('change', ()=>{ renderShippingRequests(); renderShippingStats(); });
+  
+  // Add create shipping request button handler
+  const createBtn = document.getElementById('create-shipping-request-from-shipping');
+  if(createBtn){
+    createBtn.addEventListener('click', ()=> {
+      // Open modal without any prefilled order data
+      openShipRequestModal();
+    });
+  }
 }
 
 export function renderShippingRequests(){

@@ -5,10 +5,60 @@ import { loadOrders, attachOrderHistoryHandlers } from '../views/orderHistoryVie
 import { initShippingRequestsView } from '../views/shippingRequestsView.js';
 import { showLoader, hideLoader, withButtonLoader } from '../utils/loader.js';
 import { initTicketsView } from '../views/ticketsView.js';
-import { loadShippingRequests } from '../views/shippingRequestsView.js';
+import { initAuth, isLoggedIn } from './auth.js';
+
+// Track which views have been loaded
+const viewsLoaded = {
+  'order-history': false,
+  'shipping-requests': false,
+  'customer-support': false,
+  'tickets': false
+};
+
+// Define loading sequence
+const LOAD_SEQUENCE = ['tickets', 'customer-support', 'shipping-requests', 'order-history'];
+let currentLoadIndex = 0;
 
 function isoRange(fromDate, toDate){
   return [fromDate + 'T00:00:00Z', toDate + 'T23:59:59Z'];
+}
+
+// Function to load next view in sequence
+async function loadNextView() {
+  if (currentLoadIndex >= LOAD_SEQUENCE.length) return;
+  
+  const viewToLoad = LOAD_SEQUENCE[currentLoadIndex];
+  const section = document.getElementById(`view-${viewToLoad}`);
+  
+  if (!viewsLoaded[viewToLoad]) {
+    console.log(`🔄 Sequential loading: Loading ${viewToLoad}...`);
+    try {
+      switch(viewToLoad) {
+        case 'tickets':
+          await initTicketsView();
+          break;
+        case 'customer-support':
+          await loadCustomerSupport();
+          break;
+        case 'order-history':
+          await loadOrders();
+          break;
+        case 'shipping-requests':
+          await initShippingRequestsView();
+          break;
+      }
+      viewsLoaded[viewToLoad] = true;
+      console.log(`✅ Loaded ${viewToLoad} successfully`);
+    } catch(err) {
+      console.error(`Failed to load ${viewToLoad}:`, err);
+    }
+  }
+  
+  currentLoadIndex++;
+  // Load next view after a short delay
+  if (currentLoadIndex < LOAD_SEQUENCE.length) {
+    setTimeout(loadNextView, 800); // 800ms delay between loads
+  }
 }
 
 async function switchView(view){
@@ -23,30 +73,53 @@ async function switchView(view){
   
   const currentSection = document.getElementById(`view-${view}`);
   
-  if(view==='order-history'){ 
-    if(!state.orders.length) {
-      showLoader(currentSection, 'overlay');
-      try {
-        await loadOrders();
-      } finally {
-        hideLoader(currentSection, 'overlay');
-      }
-    }
-  }
-  if(view==='shipping-requests'){ 
+  // Lazy loading: Only load data if view hasn't been loaded yet
+  if(view==='order-history' && !viewsLoaded['order-history']){ 
     showLoader(currentSection, 'overlay');
     try {
-      await initShippingRequestsView();
+      await loadOrders();
+      viewsLoaded['order-history'] = true;
+    } catch(err) {
+      console.error('Failed to load orders:', err);
     } finally {
       hideLoader(currentSection, 'overlay');
     }
   }
-  if(view==='customer-support'){
-    // Customer support is already loaded, no need to reload
-  }
-  if(view==='tickets'){
+  
+  if(view==='shipping-requests' && !viewsLoaded['shipping-requests']){ 
     showLoader(currentSection, 'overlay');
-    try { await initTicketsView(); } finally { hideLoader(currentSection, 'overlay'); }
+    try {
+      await initShippingRequestsView();
+      viewsLoaded['shipping-requests'] = true;
+    } catch(err) {
+      console.error('Failed to load shipping requests:', err);
+    } finally {
+      hideLoader(currentSection, 'overlay');
+    }
+  }
+  
+  if(view==='customer-support' && !viewsLoaded['customer-support']){
+    showLoader(currentSection, 'overlay');
+    try {
+      await loadCustomerSupport();
+      viewsLoaded['customer-support'] = true;
+    } catch(err) {
+      console.error('Failed to load customer support:', err);
+    } finally {
+      hideLoader(currentSection, 'overlay');
+    }
+  }
+  
+  if(view==='tickets' && !viewsLoaded['tickets']){
+    showLoader(currentSection, 'overlay');
+    try { 
+      await initTicketsView();
+      viewsLoaded['tickets'] = true;
+    } catch(err) {
+      console.error('Failed to load tickets:', err);
+    } finally { 
+      hideLoader(currentSection, 'overlay'); 
+    }
   }
 }
 
@@ -65,8 +138,7 @@ function bindNav(){
 function bindCustomerSupportSubNav(){
   const subButtons = document.querySelectorAll('.cs-sub-btn');
   if(!subButtons.length) return;
-    const emailStatsBar = document.getElementById('email-stats-bar');
-    subButtons.forEach(btn=>{
+  subButtons.forEach(btn=>{
     btn.addEventListener('click', ()=>{
       const target = btn.getAttribute('data-cs');
       // toggle active state
@@ -80,11 +152,7 @@ function bindCustomerSupportSubNav(){
           panel.style.display='none';
         }
       });
-        if(target==='email') {
-          if(emailStatsBar) emailStatsBar.style.display='flex';
-        } else {
-          if(emailStatsBar) emailStatsBar.style.display='none';
-        }
+      // Stats bar removed from UI
     });
   });
 }
@@ -100,64 +168,30 @@ function bindFilters(){
   }
 }
 
-function bindRefreshButtons(){
-  const ordersBtn = document.getElementById('refresh-order-history');
-  if(ordersBtn){
-    ordersBtn.addEventListener('click', async ()=>{
-      const section = document.getElementById('view-order-history');
-      showLoader(section, 'overlay');
-      try { await loadOrders({ retry: true }); } finally { hideLoader(section, 'overlay'); }
-    });
-  }
-
-  const shipBtn = document.getElementById('refresh-shipping-requests');
-  if(shipBtn){
-    shipBtn.addEventListener('click', async ()=>{
-      const section = document.getElementById('view-shipping-requests');
-      showLoader(section, 'overlay');
-      try { await loadShippingRequests({ force: true }); } finally { hideLoader(section, 'overlay'); }
-    });
-  }
-
-  const csBtn = document.getElementById('refresh-customer-support');
-  if(csBtn){
-    csBtn.addEventListener('click', async ()=>{
-      const section = document.getElementById('view-customer-support');
-      showLoader(section, 'overlay');
-      try { await loadCustomerSupport(); } finally { hideLoader(section, 'overlay'); }
-    });
-  }
-
-  const ticketsBtn = document.getElementById('refresh-tickets');
-  if(ticketsBtn){
-    ticketsBtn.addEventListener('click', async ()=>{
-      const section = document.getElementById('view-tickets');
-      showLoader(section, 'overlay');
-      try {
-        const mod = await import('../views/ticketsView.js');
-        await mod.reloadTickets();
-      } finally { hideLoader(section, 'overlay'); }
-    });
-  }
-}
-
 export async function initApp(){
-  bindNav();
-  attachConversationListHandlers();
-  attachOrderHistoryHandlers();
-  bindCustomerSupportSubNav();
-  bindFilters();
-  bindRefreshButtons();
+  // Initialize auth system first
+  initAuth();
 
-  // Fire all initial data loads without blocking UI so tab switching remains responsive
-  // Start fetches for all four tabs in the background
-  (async ()=>{ try { await initCustomerSupport(); } catch(e){ console.error('Customer support init failed', e);} })();
-  (async ()=>{ try { await loadOrders(); } catch(e){ console.error('Orders load failed', e);} })();
-  (async ()=>{ try { await initShippingRequestsView(); } catch(e){ console.error('Shipping requests init failed', e);} })();
-  (async ()=>{ try { const mod = await import('../views/ticketsView.js'); await mod.initTicketsView(); } catch(e){ console.error('Tickets init failed', e);} })();
+  // Only initialize app features if logged in
+  if (isLoggedIn()) {
+    // Set up UI handlers first
+    bindNav();
+    attachConversationListHandlers();
+    attachOrderHistoryHandlers();
+    bindCustomerSupportSubNav();
+    bindFilters();
 
-  // Immediately show customer support view; user can navigate while data loads
-  await switchView('customer-support');
+    console.log('🚀 App initialized - Sequential loading enabled');
+    
+    // Show tickets view as default
+    await switchView('tickets');
+    
+    // Start sequential loading of all views
+    // This will load in order: tickets → channels → orders → shipping
+    requestAnimationFrame(() => {
+      loadNextView();
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{ initApp(); });

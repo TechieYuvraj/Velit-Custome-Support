@@ -7,7 +7,7 @@ function ensureContainer(){
   if(!modal){
     modal = document.createElement('div');
     modal.id='shipping-label-modal';
-    modal.style.cssText='display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.45);z-index:2000;align-items:center;justify-content:center;';
+    modal.style.display = 'none';
     document.body.appendChild(modal);
   }
   return modal;
@@ -15,103 +15,118 @@ function ensureContainer(){
 
 export async function openShippingLabelModal(email, orders = []){
   const modal = ensureContainer();
-  // If a single order is provided, block duplicate creation early
   if(Array.isArray(orders) && orders.length === 1){
     const orderNo = orders[0]?.['Order Number'];
     const exists = (state.shippingRequests||[]).some(r=> String(r.orderId) === String(orderNo));
     if(exists){
+      const safeOrderNo = escapeHtml(orderNo || '');
       modal.style.display='flex';
       modal.innerHTML = `
-        <div class="modal-content" style="max-width:520px;">
-          <div class="modal-header">
-            <h3>Shipping Request</h3>
-            <button class="modal-close" id="close-shipping-label-modal" aria-label="Close">&times;</button>
-          </div>
-          <div class="modal-body modal-center">
-            <div class="notice center-align">
-              Shipping Request has been already created for order <strong>${orderNo}</strong>.
+        <div class="shipping-modal">
+          <div class="shipping-modal__header">
+            <div class="shipping-modal__header-section">
+              <h3 class="shipping-modal__heading">Shipping Request</h3>
+            </div>
+            <div class="shipping-modal__header-section shipping-modal__header-section--right">
+              <h3 class="shipping-modal__heading">Notice</h3>
+              <button id="close-shipping-label-modal" class="shipping-modal__close" aria-label="Close" data-close-modal="shipping-label">&times;</button>
             </div>
           </div>
+          <div class="shipping-modal__body">
+            <div class="shipping-modal__column shipping-modal__column--details">
+              <div class="shipping-modal__details">
+                <p class="shipping-modal__message warning">Shipping Request has already been created for order <strong>${safeOrderNo}</strong>.</p>
+              </div>
+            </div>
+          </div>
+          <div class="shipping-modal__footer">
+            <button type="button" class="shipping-modal__submit" data-close-modal="shipping-label">Close</button>
+          </div>
         </div>`;
-      modal.querySelector('#close-shipping-label-modal').onclick=()=>{ modal.style.display='none'; };
+      modal.querySelectorAll('[data-close-modal="shipping-label"]').forEach(btn=>{
+        btn?.addEventListener('click', ()=>{ modal.style.display='none'; });
+      });
       return;
     }
   }
+
   modal.style.display='flex';
   modal.innerHTML = `
-    <div style="display:flex;flex-direction:column;width:90%;max-width:920px;max-height:80%;background:#fff;border-radius:14px;position:relative;box-shadow:0 8px 32px rgba(0,0,0,.18);overflow:hidden;">
-      <!-- Fixed Header Section -->
-      <div style="display:flex;background:#f8f9fa;border-bottom:2px solid #e0e0e0;padding:16px 20px;position:sticky;top:0;z-index:10;">
-        <div style="flex:1;padding-right:10px;">
-          <h3 style="margin:0;font-size:17px;font-weight:600;color:#2e4d43;">Shipping Request</h3>
+    <div class="shipping-modal">
+      <div class="shipping-modal__header">
+        <div class="shipping-modal__header-section">
+          <h3 class="shipping-modal__heading">Shipping Request</h3>
         </div>
-        <div style="flex:1;padding-left:10px;display:flex;justify-content:space-between;align-items:center;border-left:1px solid #ddd;">
-          <h3 style="margin:0;font-size:17px;font-weight:600;color:#2e4d43;">Recipient Details</h3>
-          <button id="close-shipping-label-modal" aria-label="Close" style="font-size:24px;border:none;background:none;cursor:pointer;color:#666;line-height:1;padding:0;width:28px;height:28px;display:flex;align-items:center;justify-content:center;">&times;</button>
-        </div>
-      </div>
-      <div style="display:flex;flex:1;min-height:0;">
-        <!-- Left column: order + selects -->
-        <div style="flex:1;padding:20px 18px 12px 22px;border-right:1px solid #eee;overflow-y:auto;">
-          <form id="modal-shipping-label-form" style="display:flex;flex-direction:column;height:100%;">
-            <div class="form-group" style="background:#e8f5f0;padding:12px;border-radius:8px;border:2px solid #4a9d7a;margin-bottom:16px;">
-              <label for="modal-service-type" style="display:block;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#2e4d43;margin-bottom:6px;">🚚 SHIPPING SERVICE TYPE:</label>
-              <select id="modal-service-type" required style="padding:10px 12px;border:2px solid #4a9d7a;border-radius:8px;background:#ffffff;font-size:14px;font-weight:600;width:100%;cursor:pointer;box-sizing:border-box;color:#2e4d43;">
-                <option value="FEDEX_GROUND">FEDEX GROUND</option>
-                <option value="UPS_GROUND">UPS GROUND</option>
-              </select>
-            </div>
-            <div id="modal-order-no-group" class="form-group"></div>
-            <div class="form-group" id="modal-from-address-group"></div>
-            <div class="form-group" id="modal-product-dimensions-group"></div>
-            <div id="modal-left-spacer" style="flex:1;"></div>
-          </form>
-        </div>
-        <!-- Right column: name + address fields -->
-        <div style="flex:1;padding:20px 24px 12px 24px;overflow-y:auto;">
-          <div id="modal-dynamic-address"></div>
-          <div id="modal-shipping-label-response" style="margin-top:10px;font-size:13px;"></div>
+        <div class="shipping-modal__header-section shipping-modal__header-section--right">
+          <h3 class="shipping-modal__heading">Recipient Details</h3>
+          <button id="close-shipping-label-modal" class="shipping-modal__close" aria-label="Close" data-close-modal="shipping-label">&times;</button>
         </div>
       </div>
-      <div style="padding:12px 0 18px;display:flex;justify-content:center;border-top:1px solid #eee;background:#fafafa;">
-  <button type="submit" form="modal-shipping-label-form" class="primary-action" style="min-width:220px;">Create</button>
+      <div class="shipping-modal__body">
+        <form id="modal-shipping-label-form" class="shipping-modal__column shipping-modal__form">
+          <div class="shipping-modal__card shipping-modal__card--service">
+            <label for="modal-service-type">Shipping Service</label>
+            <select id="modal-service-type" required>
+              <option value="FEDEX_GROUND">FEDEX GROUND</option>
+              <option value="UPS_GROUND">UPS GROUND</option>
+            </select>
+          </div>
+          <div id="modal-order-no-group" class="form-group"></div>
+          <div id="modal-from-address-group" class="form-group"></div>
+          <div id="modal-product-dimensions-group" class="form-group"></div>
+        </form>
+        <div class="shipping-modal__column shipping-modal__column--details">
+          <div id="modal-dynamic-address" class="shipping-modal__details"></div>
+          <div id="modal-shipping-label-response" class="shipping-modal__message"></div>
+        </div>
+      </div>
+      <div class="shipping-modal__footer">
+        <button type="submit" form="modal-shipping-label-form" class="shipping-modal__submit">Create</button>
       </div>
     </div>`;
 
-  modal.querySelector('#close-shipping-label-modal').onclick=()=>{ modal.style.display='none'; };
+  modal.querySelectorAll('[data-close-modal="shipping-label"]').forEach(btn=>{
+    btn?.addEventListener('click', ()=>{ modal.style.display='none'; });
+  });
 
   buildOrderSelector(orders);
   buildStaticSelects();
   buildFromDetails();
   buildProductSpecs();
-  // Prefill default selects if empty
+
   const fromSel = modal.querySelector('#modal-from-address');
   if(fromSel && !fromSel.value && fromSel.options.length) fromSel.selectedIndex = 0;
   const prodSel = modal.querySelector('#modal-product-dimensions');
   if(prodSel && !prodSel.value && prodSel.options.length) prodSel.selectedIndex = 0;
-  // Fill details after defaults applied
+
   fillFromFromPreset();
   fillProductFromPreset();
 
-  // Submission now tied to bottom button (form still left column)
-  modal.querySelector('#modal-shipping-label-form').addEventListener('submit', async (e)=>{
+  const form = modal.querySelector('#modal-shipping-label-form');
+  form?.addEventListener('submit', async (e)=>{
     e.preventDefault();
     const orderNo = document.getElementById('modal-order-no')?.value.trim();
-    const respDiv = document.getElementById('modal-shipping-label-response');
-    respDiv.textContent='';
-    // Disable the Create button and show a loader text
+    const respDiv = modal.querySelector('#modal-shipping-label-response');
+    if(respDiv){
+      respDiv.textContent = '';
+      respDiv.classList.remove('success','warning','error');
+    }
+
     const createBtn = modal.querySelector('button[form="modal-shipping-label-form"]');
     const originalBtnHtml = createBtn ? createBtn.innerHTML : '';
     if(createBtn){ createBtn.disabled = true; createBtn.innerHTML = '⏳ Creating…'; }
-    // Prevent duplicate shipping requests for same order
+
     const exists = (state.shippingRequests||[]).some(r=> String(r.orderId) === String(orderNo));
     if(exists){
-      respDiv.innerHTML = '<span style="color:#b26a00;">Shipping Request has been already created.</span>';
+      if(respDiv){
+        respDiv.textContent = 'Shipping Request has already been created.';
+        respDiv.classList.add('warning');
+      }
       if(createBtn){ createBtn.disabled = false; createBtn.innerHTML = originalBtnHtml; }
       return;
     }
+
     const payload = buildShippingRequestPayload(orderNo, email);
-    // Basic validation on essential fields
     const required = [
       document.getElementById('modal-shipping-name')?.value,
       document.getElementById('modal-shipping-address1')?.value,
@@ -124,22 +139,31 @@ export async function openShippingLabelModal(email, orders = []){
     ];
     const missing = required.some(v=> !v || !String(v).trim());
     if(missing){
-      respDiv.innerHTML = `<span style='color:#b00020;'>Please fill all recipient fields.</span>`;
+      if(respDiv){
+        respDiv.textContent = 'Please fill all recipient fields.';
+        respDiv.classList.add('error');
+      }
       if(createBtn){ createBtn.disabled = false; createBtn.innerHTML = originalBtnHtml; }
       return;
     }
+
     try {
       const Name = document.getElementById('modal-shipping-name')?.value || '';
       const EmailAddr = document.getElementById('modal-shipping-email')?.value || '';
-  const product = document.getElementById('modal-product-dimensions')?.value || '';
-  const createdAtIso = new Date().toISOString();
-  const meta = { date: createdAtIso, product, orderId: orderNo, Name, Email: EmailAddr };
+      const product = document.getElementById('modal-product-dimensions')?.value || '';
+      const createdAtIso = new Date().toISOString();
+      const meta = { date: createdAtIso, product, orderId: orderNo, Name, Email: EmailAddr };
       await api.createShippingLabel(payload, meta);
-      respDiv.innerHTML='<div style="color:#195744;font-weight:600;">Submitted successfully. Your label will be available shortly.</div>';
+      if(respDiv){
+        respDiv.textContent = 'Submitted successfully. Your label will be available shortly.';
+        respDiv.classList.add('success');
+      }
     } catch(err){
-      respDiv.innerHTML = '<span style="color:#b00020;">Failed to submit.</span>';
-    }
-    finally {
+      if(respDiv){
+        respDiv.textContent = 'Failed to submit.';
+        respDiv.classList.add('error');
+      }
+    } finally {
       if(createBtn){ createBtn.disabled = false; createBtn.innerHTML = originalBtnHtml; }
     }
   });
@@ -169,27 +193,41 @@ function renderAddressFields(order={}){
   const host=document.getElementById('modal-dynamic-address');
   if(!host) return;
   host.innerHTML = `
-    <div class="form-group"><label>Shipping Name:</label><input type="text" id="modal-shipping-name" value="${order['Shipping Name']||''}"></div>
-    <div class="form-group"><label>Address 1:</label><input type="text" id="modal-shipping-address1" value="${order['Shipping Address 1']||''}"></div>
-    <div class="form-group"><label>Address 2:</label><input type="text" id="modal-shipping-address2" value="${order['Shipping Address 2']||''}"></div>
-    <div class="form-group"><label>City:</label><input type="text" id="modal-shipping-city" value="${order['Shipping City']||''}"></div>
-    <div class="form-group"><label>State:</label><input type="text" id="modal-shipping-state" value="${order['Shipping State']||''}"></div>
-    <div class="form-group"><label>Country:</label><input type="text" id="modal-shipping-country" value="${order['Shipping Country']||''}"></div>
-    <div class="form-group"><label>Zipcode:</label><input type="text" id="modal-shipping-zipcode" value="${order['Shipping Zipcode']||''}"></div>
-    <div class="form-group"><label>Phone:</label><input type="text" id="modal-shipping-phone" value="${order['Phone']||''}"></div>
-    <div class="form-group"><label>Email:</label><input type="text" id="modal-shipping-email" value="${order['Email']||''}"></div>`;
+    <div class="shipping-modal__grid">
+      <div class="form-group"><label>Shipping Name</label><input type="text" id="modal-shipping-name" value="${order['Shipping Name']||''}"></div>
+      <div class="form-group"><label>Address 1</label><input type="text" id="modal-shipping-address1" value="${order['Shipping Address 1']||''}"></div>
+      <div class="form-group"><label>Address 2</label><input type="text" id="modal-shipping-address2" value="${order['Shipping Address 2']||''}"></div>
+      <div class="form-group"><label>City</label><input type="text" id="modal-shipping-city" value="${order['Shipping City']||''}"></div>
+      <div class="form-group"><label>State</label><input type="text" id="modal-shipping-state" value="${order['Shipping State']||''}"></div>
+      <div class="form-group"><label>Country</label><input type="text" id="modal-shipping-country" value="${order['Shipping Country']||''}"></div>
+      <div class="form-group"><label>Zipcode</label><input type="text" id="modal-shipping-zipcode" value="${order['Shipping Zipcode']||''}"></div>
+      <div class="form-group"><label>Phone</label><input type="text" id="modal-shipping-phone" value="${order['Phone']||''}"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="modal-shipping-email" value="${order['Email']||''}"></div>
+    </div>`;
 }
 
 function buildStaticSelects(){
   const fromGroup=document.getElementById('modal-from-address-group');
   if(fromGroup){
-    fromGroup.innerHTML='<label for="modal-from-address">From Address:</label>'; const sel=document.createElement('select'); sel.id='modal-from-address'; FROM_ADDRESSES.forEach(a=>{ const o=document.createElement('option'); o.value=a; o.textContent=a; sel.appendChild(o); }); fromGroup.appendChild(sel);
-    const details=document.createElement('div'); details.id='modal-from-details'; details.className='form-subgroup'; fromGroup.appendChild(details);
+    fromGroup.innerHTML='';
+    const label=document.createElement('label');
+    label.setAttribute('for','modal-from-address');
+    label.textContent='From Address Preset';
+    const sel=document.createElement('select'); sel.id='modal-from-address';
+    FROM_ADDRESSES.forEach(a=>{ const o=document.createElement('option'); o.value=a; o.textContent=a; sel.appendChild(o); });
+    fromGroup.append(label, sel);
+    const details=document.createElement('div'); details.id='modal-from-details'; details.className='shipping-modal__grid'; fromGroup.appendChild(details);
   }
   const prodGroup=document.getElementById('modal-product-dimensions-group');
   if(prodGroup){
-    prodGroup.innerHTML='<label for="modal-product-dimensions">Product Dimensions:</label>'; const sel=document.createElement('select'); sel.id='modal-product-dimensions'; PRODUCT_DIMENSIONS.forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); }); prodGroup.appendChild(sel);
-    const details=document.createElement('div'); details.id='modal-product-specs'; details.className='form-subgroup'; prodGroup.appendChild(details);
+    prodGroup.innerHTML='';
+    const label=document.createElement('label');
+    label.setAttribute('for','modal-product-dimensions');
+    label.textContent='Product Dimensions';
+    const sel=document.createElement('select'); sel.id='modal-product-dimensions';
+    PRODUCT_DIMENSIONS.forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
+    prodGroup.append(label, sel);
+    const details=document.createElement('div'); details.id='modal-product-specs'; details.className='shipping-modal__grid'; prodGroup.appendChild(details);
   }
 }
 
@@ -197,15 +235,15 @@ function buildFromDetails(){
   const host = document.getElementById('modal-from-details');
   if(!host) return;
   host.innerHTML = `
-    <div class="form-group"><label>Full Name:</label><input type="text" id="modal-from-fullName"></div>
-    <div class="form-group"><label>Sender Name:</label><input type="text" id="modal-from-senderName"></div>
-    <div class="form-group"><label>Address 1:</label><input type="text" id="modal-from-address1"></div>
-    <div class="form-group"><label>Address 2:</label><input type="text" id="modal-from-address2"></div>
-    <div class="form-group"><label>City:</label><input type="text" id="modal-from-city"></div>
-    <div class="form-group"><label>State:</label><input type="text" id="modal-from-state"></div>
-    <div class="form-group"><label>Country:</label><input type="text" id="modal-from-country"></div>
-    <div class="form-group"><label>Zipcode:</label><input type="text" id="modal-from-zipCode"></div>
-    <div class="form-group"><label>Phone:</label><input type="text" id="modal-from-phoneNumber"></div>`;
+    <div class="form-group"><label>Full Name</label><input type="text" id="modal-from-fullName"></div>
+    <div class="form-group"><label>Sender Name</label><input type="text" id="modal-from-senderName"></div>
+    <div class="form-group"><label>Address 1</label><input type="text" id="modal-from-address1"></div>
+    <div class="form-group"><label>Address 2</label><input type="text" id="modal-from-address2"></div>
+    <div class="form-group"><label>City</label><input type="text" id="modal-from-city"></div>
+    <div class="form-group"><label>State</label><input type="text" id="modal-from-state"></div>
+    <div class="form-group"><label>Country</label><input type="text" id="modal-from-country"></div>
+    <div class="form-group"><label>Zipcode</label><input type="text" id="modal-from-zipCode"></div>
+    <div class="form-group"><label>Phone</label><input type="text" id="modal-from-phoneNumber"></div>`;
   const sel = document.getElementById('modal-from-address');
   if(sel){ sel.addEventListener('change', fillFromFromPreset); }
 }
@@ -214,10 +252,10 @@ function buildProductSpecs(){
   const host = document.getElementById('modal-product-specs');
   if(!host) return;
   host.innerHTML = `
-    <div class="form-group"><label>Length:</label><input type="number" min="1" id="modal-prod-length"></div>
-    <div class="form-group"><label>Width:</label><input type="number" min="1" id="modal-prod-width"></div>
-    <div class="form-group"><label>Height:</label><input type="number" min="1" id="modal-prod-height"></div>
-    <div class="form-group"><label>Weight:</label><input type="number" min="1" id="modal-prod-weight"></div>`;
+    <div class="form-group"><label>Length</label><input type="number" min="1" id="modal-prod-length"></div>
+    <div class="form-group"><label>Width</label><input type="number" min="1" id="modal-prod-width"></div>
+    <div class="form-group"><label>Height</label><input type="number" min="1" id="modal-prod-height"></div>
+    <div class="form-group"><label>Weight</label><input type="number" min="1" id="modal-prod-weight"></div>`;
   const sel = document.getElementById('modal-product-dimensions');
   if(sel){ sel.addEventListener('change', fillProductFromPreset); }
 }

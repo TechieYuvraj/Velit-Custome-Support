@@ -13,6 +13,48 @@ function ensureModal(){
   return m;
 }
 
+function buildOrderOptionsHtml() {
+  const orders = state.orders || [];
+  const options = orders.map(order => {
+    const address = order.address || {};
+    return `
+      <option value="${order.id}" 
+              data-email="${order.email || ''}"
+              data-name="${order.name || ''}"
+              data-address1="${address.line1 || ''}"
+              data-address2="${address.line2 || ''}"
+              data-city="${address.city || ''}"
+              data-state="${address.state || ''}"
+              data-country="${address.country || ''}"
+              data-zip="${address.zip || ''}"
+              data-phone="${order.phone || ''}">
+        Order #${order.id}
+      </option>
+    `;
+  }).join('');
+  return `<select id="sr-order-no" required class="order-select">
+    <option value="">Select Order Number</option>
+    ${options}
+  </select>`;
+}
+
+function handleOrderSelect(e) {
+  const select = e.target;
+  const option = select.options[select.selectedIndex];
+  if (!option.value) return;
+
+  // Auto-fill recipient details
+  setVal('sr-email', option.dataset.email);
+  setVal('sr-to-fullname', option.dataset.name);
+  setVal('sr-to-address1', option.dataset.address1);
+  setVal('sr-to-address2', option.dataset.address2);
+  setVal('sr-to-city', option.dataset.city);
+  setVal('sr-to-state', option.dataset.state);
+  setVal('sr-to-country', option.dataset.country);
+  setVal('sr-to-zip', option.dataset.zip);
+  setVal('sr-to-phone', option.dataset.phone);
+}
+
 export function openShipRequestModal(prefillOrder){
   const modal = ensureModal();
   modal.style.display='flex';
@@ -22,8 +64,14 @@ export function openShipRequestModal(prefillOrder){
       <button id="close-ship-request" aria-label="Close" style="position:absolute;top:8px;right:10px;font-size:20px;border:none;background:none;cursor:pointer">&times;</button>
       <h3 style="margin:0 0 12px;font-size:18px;font-weight:600;">Create Shipping Request</h3>
       <form id="ship-request-form">
-        <div class="form-row"><label>Order No:</label><input type="text" id="sr-order-no" value="${order['Order Number']|| order.id || ''}" required /></div>
-        <div class="form-row"><label>Email:</label><input type="email" id="sr-email" value="${order.Email || order.email || ''}" /></div>
+        <div class="form-row">
+          <label>Order No:</label>
+          ${buildOrderOptionsHtml()}
+        </div>
+        <div class="form-row">
+          <label>Email:</label>
+          <input type="email" id="sr-email" value="${order.Email || order.email || ''}" readonly />
+        </div>
 
         <div class="form-row" style="background:#e8f5f0;padding:12px;border-radius:8px;border:2px solid #4a9d7a;margin:16px 0;">
           <label style="display:block;font-size:.75rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#2e4d43;margin-bottom:6px;">🚚 SHIPPING SERVICE TYPE:</label>
@@ -71,6 +119,18 @@ export function openShipRequestModal(prefillOrder){
       </form>
     </div>`;
   modal.querySelector('#close-ship-request').onclick=()=> modal.style.display='none';
+  
+  // Set up order selection handler
+  const orderSelect = document.getElementById('sr-order-no');
+  if (orderSelect) {
+    orderSelect.addEventListener('change', handleOrderSelect);
+    // If prefillOrder exists, select it
+    if (prefillOrder) {
+      orderSelect.value = prefillOrder.id || prefillOrder['Order Number'];
+      orderSelect.dispatchEvent(new Event('change'));
+    }
+  }
+
   // Prefill From inputs from preset
   const fromSelect = document.getElementById('sr-from-address');
   const fillFrom = (key)=>{

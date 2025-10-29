@@ -1,9 +1,16 @@
-import { state, setState } from '../core/state.js';
+import { state, setState, subscribe } from '../core/state.js';
 import { openShippingLabelModal } from '../components/shippingLabelModal.js';
 import { api } from '../core/api.js';
 import { openShipRequestModal } from '../components/shipRequestModal.js';
 import { showServerErrorModal } from '../utils/errorModal.js';
 import { formatDate } from '../utils/format.js';
+
+// Re-render orders when shipping requests change
+subscribe(state => {
+  if (state.shippingRequests) {
+    renderOrderCards();
+  }
+});
 
 const escapeHtml = (str = '') => {
   const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -145,12 +152,14 @@ function multilineAddress(addr){
 
 function orderCard(o){
   const addr = multilineAddress(o.address).replace(/\n/g,'<br>');
-  const exists = (state.shippingRequests||[]).some(r=> String(r.orderId) === String(o.id));
+  const shippingRequest = (state.shippingRequests||[]).find(r => String(r.orderId) === String(o.id));
+  const exists = Boolean(shippingRequest);
   const productName = o.productName || '—';
   const dateSource = o.orderDate || o.createdAt;
   const formattedDate = dateSource ? formatDate(dateSource) : '';
   const orderDate = formattedDate && formattedDate !== 'N/A' ? formattedDate : '';
   const orderDateBadge = orderDate ? `<span class="order-date">${escapeHtml(orderDate)}</span>` : '';
+  
   return `<div class="order-card" data-order-id="${o.id}">
     <div class="order-header">
       <h4>${o.id}</h4>
@@ -161,6 +170,8 @@ function orderCard(o){
       <div><strong>${o.name || '—'}</strong><br><span class="email">${o.email || '—'}</span>${o.phone? `<br><span class="phone">${o.phone}</span>`:''}</div>
     </div>
     <div class="order-address">${addr}</div>
-    <div class="order-actions">${exists ? '<span class="muted">Shipping Request has been already created.</span>' : '<button class="mini-btn">Create Shipping Request</button>'}</div>
+    <div class="order-actions">
+      ${exists ? '<span class="muted">Shipping Request has been already created.</span>' : '<button class="mini-btn">Create Shipping Request</button>'}
+    </div>
   </div>`;
 }

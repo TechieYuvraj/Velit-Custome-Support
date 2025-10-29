@@ -9,12 +9,24 @@ const DEFAULT_TO = '2025-09-16T23:59:59Z';
 
 // Entry used by bootstrap
 export async function loadCustomerSupport(fromDateISO = DEFAULT_FROM, toDateISO = DEFAULT_TO){
+  const section = document.getElementById('view-customer-support');
+  
   try {
     showLoading();
+    if(section) showLoader(section, 'overlay');
+    
     const data = await api.fetchConversations(fromDateISO, toDateISO);
     
     // Handle new Firestore document structure
     const normalizedData = normalizeFirestoreResponse(data);
+    
+    // Sort by updated_at or started_at in descending order (newest first)
+    normalizedData.sort((a, b) => {
+      const dateA = new Date(a.updated_at || a.started_at || 0);
+      const dateB = new Date(b.updated_at || b.started_at || 0);
+      return dateB - dateA; // Descending order
+    });
+    
     const emailConversations = normalizedData.filter(c => c.channel_type === 'email');
     const crmConversations = normalizedData.filter(c => c.channel_type === 'inapp_public');
     
@@ -27,6 +39,8 @@ export async function loadCustomerSupport(fromDateISO = DEFAULT_FROM, toDateISO 
     showError();
     // Show error modal popup
     showServerErrorModal('Failed to load customer support conversations. Server not responding.', () => loadCustomerSupport(fromDateISO, toDateISO));
+  } finally {
+    if(section) hideLoader(section, 'overlay');
   }
 }
 
@@ -150,15 +164,18 @@ function crmItemHtml(conv){
 }
 
 function updateEmailStats(){
+  // Stats logic kept for potential future use, but not displayed
+  // Remove this function call from loadCustomerSupport if stats are permanently removed
   const list = state.emailConversations || [];
   const total = list.length;
   const open = list.filter(c => (c.status||'').toLowerCase()==='open').length;
   const closed = list.filter(c => (c.status||'').toLowerCase()==='closed').length;
   const pending = list.filter(c => !c.status).length;
-  setStat('cs-total', total);
-  setStat('cs-open', open);
-  setStat('cs-closed', closed);
-  setStat('cs-pending', pending);
+  // Stats elements removed from HTML - no longer displaying
+  // setStat('cs-total', total);
+  // setStat('cs-open', open);
+  // setStat('cs-closed', closed);
+  // setStat('cs-pending', pending);
 }
 
 function setStat(id, val){ const el=document.getElementById(id); if(el) el.textContent = val; }
